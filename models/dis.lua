@@ -1,16 +1,20 @@
+-- Discriminator network structure.
+require 'custom_layers'
+
+
 
 local nn = require 'nn'
-require 'cudnn'
 
 
-local Discriminator = {}
+local Dicrim = {}
 
-local SBatchNorm = cudnn.SpatialBatchNormalization
-local SConv = cudnn.SpatialConvolution
-local SFullConv = cudnn.SpatialFullConvolution
+local SBatchNorm = nn.SpatialBatchNormalization
+local SConv = nn.SpatialConvolution
+local AvgPool = nn.SpatialAveragePooling
+local Minibatch = nn.MinibatchStatConcat
 
 
-function Discriminator.weights_init(m)
+function Discrim.weights_init(m)
 	local name = torch.type(m)
 	if name:find('Convolution') then
 		m.weight:normal(0.0, 0.02)
@@ -21,112 +25,94 @@ function Discriminator.weights_init(m)
 	end
 end
 
--- Generator input context to noise
-function Discriminator.create_model(type, opt)
-	assert(type==64 or type==128, 'erorr. type argument must \'64\' or \'128\'.')
+-- create generator structure.
+function Discrim.create_model(config)
+   
+   
+    local model = nn.Sequential()
 
-	local nc = opt.nc
-	local nz = opt.nh
-	local ngf = opt.ngf
-    local nef = opt.ngf
-	local model = nn.Sequential()
+    local nz = config['nz']
+    local ndf = config['fmap_max']
+    local nchannel = config['num_channels']
     
-	if type == 128 then
-        -- encoder.
-        -- state size : (3) x 128 x 128 
-        local enc = nn.Sequential()
-        enc:add(SConv(3, nef, 4, 4, 2, 2, 1, 1))
-        enc:add(nn.ReLU(true))
-        -- state size : (nef) x 64 x 64
-        enc:add(SConv(nef, nef, 4, 4, 2, 2, 1, 1))
-        enc:add(SBatchNorm(nef)):add(nn.ReLU(true))
-        -- state size : (nef) x 32 x 32
-        enc:add(SConv(nef, 2*nef, 4, 4, 2, 2, 1, 1))
-        enc:add(SBatchNorm(2*nef)):add(nn.ReLU(true))
-        -- state size : (2*nef) x 16 x 16
-        enc:add(SConv(2*nef, 4*nef, 4, 4, 2, 2, 1, 1))
-        enc:add(SBatchNorm(4*nef)):add(nn.ReLU(true))
-        -- state size : (4*nef) x 8 x 8
-        enc:add(SConv(4*nef, 8*nef, 4, 4, 2, 2, 1, 1))
-        enc:add(SBatchNorm(8*nef)):add(nn.ReLU(true))
-        -- state size : (8*nef) x 4 x 4
-        enc:add(SConv(8*nef, nz, 4, 4))
-        -- state size : (nz) x 1 x 1
+    flag_bn = config['use_bathnorm']
+    flag_lrelu = config['use_leakyrelu']
+    flag_pxlnorm = config['use_pixelnorm']
+    flag_tanh = config['use_tanh']
+    
+    -- set initial block.
+    local input_block = nn.Sequential()
+    input_block:add(SConv(nchannel, ndf/32, 1, 1))
+    if flag_bn then input_block:add(SBatchNorm(ngf)) end
+    if flag_lrelu then input_block:add(nn.LeakyReLU(0.2,true)) else input_block:add(nn.ReLU(true)) end
+    input_block:add(SConv(ndf/32, ndf/32, 3, 3, 1, 1, 1, 1))
+    if flag_bn then input_block:add(SBatchNorm(ngf)) end
+    if flag_lrelu then input_block:add(nn.LeakyReLU(0.2,true)) else input_block:add(nn.ReLU(true)) end
+    input_block:add(SConv(ndf/32, ndf/16, 3, 3, 1, 1, 1, 1))
+    if flag_bn then input_block:add(SBatchNorm(ngf)) end
+    if flag_lrelu then input_block:add(nn.LeakyReLU(0.2,true)) else input_block:add(nn.ReLU(true)) end
+    input_block:add(AvgPool(2,2,2,2))           -- downsample by factor of 2
+    -- state size : ngf x 4 x 4
+    model:add(input_block)
 
-        -- decoder.
-		-- state size : (nBottleneck) x 1 x 1
-		local dec = nn.Sequential()
-        dec:add(SFullConv(nz, 8*ngf, 4, 4):noBias())
-		dec:add(SBatchNorm(8*ngf)):add(nn.ReLU(true))
-		-- state size : (8*ngf) x 4 x 4
-		dec:add(SFullConv(8*ngf, 4*ngf, 4, 4, 2, 2, 1, 1):noBias())
-		dec:add(SBatchNorm(4*ngf)):add(nn.ReLU(true))
-		-- state size : (4*ngf) x 8 x 8
-		dec:add(SFullConv(4*ngf, 2*ngf, 4, 4, 2, 2, 1, 1):noBias())
-		dec:add(SBatchNorm(2*ngf)):add(nn.ReLU(true))
-		-- state size : (2*ngf) x 16 x 16
-		dec:add(SFullConv(2*ngf, ngf, 4, 4, 2, 2, 1, 1):noBias())
-		dec:add(SBatchNorm(ngf)):add(nn.ReLU(true))
-		-- state size : (ngf) x 32 x 32
-		dec:add(SFullConv(ngf, ngf, 4, 4, 2, 2, 1, 1):noBias())
-		dec:add(SBatchNorm(ngf)):add(nn.ReLU(true))
-		-- state size : (ngf) x 64 x 64
-		dec:add(SFullConv(ngf, nc, 4, 4, 2, 2, 1, 1))
-		dec:add(nn.Tanh())
-		-- state size : (nc) x 128 x 128
-        
-        model:add(enc):add(dec)
+    -- intermediate blocks.
+    local ndim = nil
+    for i = 1, 7 do
+        ndim = ndf
+        if i == 1 then
+            for k = 1, (5-i) do ndim = ndim/2 end
+            local inter_block = Generator.intermediate_block(ndim, true)
+            model:add(inter_block)
+        elseif i==2 or i==3 or i==4 then
+            for k = 1, (5-i) do ndim = ndim/2 end
+            local inter_block = Generator.intermediate_block(ndim, true)
+            model:add(inter_block)
+        elseif i==5 or i==6 or i==7 then
+            local inter_block = Generator.intermediate_block(ndim, false)
+            model:add(inter_block)
+        end
+    end
 
-	elseif type == 64 then
-        -- encoder.
-        -- state size : (3) x 64 x 64 
-        local enc = nn.Sequential()
-        enc:add(SConv(3, nef, 4, 4, 2, 2, 1, 1))
-        enc:add(nn.ReLU(true))
-        -- state size : (nef) x 32 x 32
-        enc:add(SConv(nef, 2*nef, 4, 4, 2, 2, 1, 1))
-        enc:add(SBatchNorm(2*nef)):add(nn.ReLU(true))
-        -- state size : (2*nef) x 16 x 16
-        enc:add(SConv(2*nef, 4*nef, 4, 4, 2, 2, 1, 1))
-        enc:add(SBatchNorm(4*nef)):add(nn.ReLU(true))
-        -- state size : (4*nef) x 8 x 8
-        enc:add(SConv(4*nef, 8*nef, 4, 4, 2, 2, 1, 1))
-        enc:add(SBatchNorm(8*nef)):add(nn.ReLU(true))
-        -- state size : (8*nef) x 4 x 4
-        enc:add(SConv(8*nef, nz, 4, 4))
-        -- state size : (nz) x 1 x 1
+    -- final block.
+    local output_block = nn.Sequential()
+    output_block:add(Minibatch(ndim))
+    -- conv1 (3x3)
+    output_block:add(SConv(ndim, ndim, 3, 3, 1, 1, 1, 1))
+    if flag_bn then output_block:add(SBatchNorm(ndim/2)) end
+    if flag_lrelu then output_block:add(nn.LeakyReLU(0.2,true)) else output_block:add(nn.ReLU(true)) end
+    -- conv2 (3x3)
+    output_block:add(SConv(ndim, ndim, 4, 4))
+    if flag_bn then output_block:add(SBatchNorm(ndim/2)) end
+    if flag_lrelu then output_block:add(nn.LeakyReLU(0.2,true)) else output_block:add(nn.ReLU(true)) end
+    -- Linear (1x1)
+    output_block:add(View(-1, 1))
+    output_block:add(nn.Linear(ndim, 1))
+    output_block:add(nn.Sigmoid())
+    model:add(output_block)
 
-        -- decoder.
-		-- state size : (nBottleneck) x 1 x 1
-		local dec = nn.Sequential()
-        dec:add(SFullConv(nz, 8*ngf, 4, 4):noBias())
-		dec:add(SBatchNorm(8*ngf)):add(nn.ReLU(true))
-		-- state size : (8*ngf) x 4 x 4
-		dec:add(SFullConv(8*ngf, 4*ngf, 4, 4, 2, 2, 1, 1):noBias())
-		dec:add(SBatchNorm(4*ngf)):add(nn.ReLU(true))
-		-- state size : (4*ngf) x 8 x 8
-		dec:add(SFullConv(4*ngf, 2*ngf, 4, 4, 2, 2, 1, 1):noBias())
-		dec:add(SBatchNorm(2*ngf)):add(nn.ReLU(true))
-		-- state size : (2*ngf) x 16 x 16
-		dec:add(SFullConv(2*ngf, ngf, 4, 4, 2, 2, 1, 1):noBias())
-		dec:add(SBatchNorm(ngf)):add(nn.ReLU(true))
-		-- state size : (ngf) x 32 x 32
-		dec:add(SFullConv(ngf, nc, 4, 4, 2, 2, 1, 1))
-		dec:add(nn.Tanh())
-		-- state size : (nc) x 64 x 64
-        
-        model:add(enc):add(dec)
-	end
-
-    -- true flag means sharing memory.
-    local siamese = nn.MapTable(model, true)
-    local net = nn.Sequential():add(siamese)
-
-	return net
+    return model
 end
 
+function Discrim.intermediate_block(ndim, doubling)
+    doubling = doubling or false
+    local inter_block = nn.Sequential()
+    
+    
+    if doubling then ndf = ndim*2 else ndf = ndim end
+    -- conv1
+    inter_block:add(SConv(ndim, ndf, 3, 3, 1, 1, 1, 1))
+    if flag_bn then inter_block:add(SBatchNorm(ndf)) end
+    if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
+    -- conv2
+    inter_block:add(SConv(ndf, ndf, 3, 3, 1, 1, 1, 1))
+    if flag_bn then inter_block:add(SBatchNorm(ndf)) end
+    if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
+    inter_block:add(AvgPool(2,2,2,2))           -- scale down by factor of 2.0
 
-return Discriminator
+    return inter_block
+end
+
+return Generator
 
 
 

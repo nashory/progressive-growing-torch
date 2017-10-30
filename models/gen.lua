@@ -39,7 +39,7 @@ function Generator.create_model(g_config)
     
     -- set initial block.
     local input_block = nn.Sequential()
-    input_block:add(SFullConv(nz, ngf, 4, 4):noBias())
+    input_block:add(SFullConv(nz, ngf, 4, 4, 2, 2, 1, 1):noBias())
     if flag_bn then input_block:add(SBatchNorm(ngf)) end
     if flag_lrelu then input_block:add(nn.LeakyReLU(0.2,true)) else input_block:add(nn.ReLU(true)) end
     input_block:add(SFullConv(nz, ngf, 3, 3, 1, 1, 1, 1):noBias())
@@ -69,11 +69,11 @@ function Generator.create_model(g_config)
     local output_block = nn.Sequential()
     output_block:add(UpSampleNearest(2.0))           -- scale up by factor of 2.0
     -- conv1 (3x3)
-    output_block:add(SFullConv(ndim, ndim/2, 3, 3, 1, 1))
+    output_block:add(SFullConv(ndim, ndim/2, 3, 3, 1, 1, 1, 1))
     if flag_bn then output_block:add(SBatchNorm(ndim/2)) end
     if flag_lrelu then output_block:add(nn.LeakyReLU(0.2,true)) else output_block:add(nn.ReLU(true)) end
     -- conv2 (3x3)
-    output_block:add(SFullConv(ndim/2, ndim/2, 3, 3, 1, 1))
+    output_block:add(SFullConv(ndim/2, ndim/2, 3, 3, 1, 1, 1, 1))
     if flag_bn then output_block:add(SBatchNorm(ndim/2)) end
     if flag_lrelu then output_block:add(nn.LeakyReLU(0.2,true)) else output_block:add(nn.ReLU(true)) end
     -- conv3 (1x1)
@@ -93,11 +93,11 @@ function Generator.intermediate_block(ndim, halving)
     
     if halving then ngf = ndim/2 else ngf = ndim end
     -- conv1
-    inter_block:add(SFullConv(ndim, ngf, 3, 3, 1, 1))
+    inter_block:add(SFullConv(ndim, ngf, 3, 3, 1, 1, 1, 1))
     if flag_bn then inter_block:add(SBatchNorm(ngf)) end
     if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
     -- conv2
-    inter_block:add(SFullConv(ngf, ngf, 3, 3, 1, 1))
+    inter_block:add(SFullConv(ngf, ngf, 3, 3, 1, 1, 1, 1))
     if flag_bn then inter_block:add(SBatchNorm(ngf)) end
     if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
 

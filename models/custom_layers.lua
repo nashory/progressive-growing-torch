@@ -4,6 +4,7 @@ require 'nn'
 require 'cunn'
 require 'cudnn'
 
+
 -- Pixel-wise normalization layer.
 local PixelWiseNorm, parent = torch.class('nn.PixelWiseNorm', 'nn.Module')
 function PixelWiseNorm:__init()
@@ -15,30 +16,15 @@ function PixelWiseNorm:updateOutput(input)
 end
 
 
--- Resolution selector for fading in new layers during progressinve growing.
-local LODSelectLayer, parent = torch.class('nn.LODSelectLayer', 'nn.Module')
-function LODSelectLayer:__init()
-    print('dd')
-end
-function LODSelectLayer:updateOutput(input)
-    print('dd')
-end
-
-
-
-
-function nn.WScale()
-    print('equalized learning rate for preceding layer.')
-end
-
-
-function nn.MinibatchStatConcat()
+-- Minibatch std concatenation (512 --> 513)
+local MinibatchStatConcat, parent = torch.class('nn.MinibatchStatConcat', 'nn.Module')
+function MinibatchStatConcat:__init()
     print('minibatch stat concatenation.')
 end
-
-function nn.GeneralizedDropOut()
-    print('generalized dropout layer.')
+function MinibatchStatConcat:updateOutput(input)
+    print('sdsfsdfs')
 end
+
 
 
 -- brought from: (https://github.com/ryankiros/layer-norm/blob/master/torch_modules/LayerNormalization.lua)
@@ -68,3 +54,31 @@ function nn.LayerNorm(nOutput, bias, eps, affine)
     end
     return nn.gModule({input},{output})
 end
+
+
+
+
+-- Resolution selector for fading in new layers during progressinve growing.
+local LODSelectLayer, parent = torch.class('nn.LODSelectLayer', 'nn.Module')
+function LODSelectLayer:__init()
+    print('dd')
+end
+function LODSelectLayer:updateOutput(input)
+    print('dd')
+end
+
+
+
+
+function nn.WScale()
+    print('equalized learning rate for preceding layer.')
+end
+
+
+
+
+function nn.GeneralizedDropOut()
+    print('generalized dropout layer.')
+end
+
+
