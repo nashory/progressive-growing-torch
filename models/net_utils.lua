@@ -1,10 +1,31 @@
 -- network utilities.
-require ''
+require 'torch'
+require 'nn'
+require 'cunn'
+require 'cudnn'
 
-
-function nn.PixelWiseNorm()
-    print('gg')
+-- Pixel-wise normalization layer.
+local PixelWiseNorm, parent = torch.class('nn.PixelWiseNorm', 'nn.Module')
+function PixelWiseNorm:__init()
+    self.elipson = 1e-8
 end
+function PixelWiseNorm:updateOutput(input)
+    local ndim = input:size(2)          -- batch x ndim x height x width
+    return input:div(torch.sqrt(input:pow(2):sum():div(ndim):add(self.elipson)))
+end
+
+
+-- Resolution selector for fading in new layers during progressinve growing.
+local LODSelectLayer, parent = torch.class('nn.LODSelectLayer', 'nn.Module')
+function LODSelectLayer:__init()
+    print('dd')
+end
+function LODSelectLayer:updateOutput(input)
+    print('dd')
+end
+
+
+
 
 function nn.WScale()
     print('equalized learning rate for preceding layer.')

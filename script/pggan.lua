@@ -2,6 +2,12 @@
 -- Progressive-growing GAN from NVIDIA.
 -- last modified : 2017.10.30, nashory
 
+-- 1 cycle = 1000 ticks
+-- we do this since the batchsize varies depending on the image resolution.
+
+
+
+
 require 'sys'
 require 'optim'
 require 'image'
@@ -28,6 +34,9 @@ function PGGAN:__init(model, criterion, opt, optimstate)
     self.batchSize = opt.batchSize
     self.sampleSize = opt.sampleSize
     self.thres = 1.0
+
+    self.batch_table = { [4]=50, [8]=50, [16]=50, [32]=20, [64]=10, [128]=10, [256]=5, [512]=2, [1024]=1 }
+
     
     -- generate test_noise(fixed)
     self.test_noise = torch.Tensor(64, self.nh)

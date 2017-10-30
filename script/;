@@ -32,10 +32,10 @@ function Generator.create_model(g_config)
     local ngf = g_config['fmap_max']
     local nchannel = g_config['num_channels']
     
-    flag_bn = g_config['use_bathnorm']
-    flag_lrelu = g_config['use_leakyrelu']
-    flag_pxlnorm = g_config['use_pixelnorm']
-    flag_tanh = g_config['use_tanh']
+    local flag_bn = g_config['use_bathnorm']
+    local flag_lrelu = g_config['use_leakyrelu']
+    local flag_pxlnorm = g_config['use_pixelnorm']
+    local flag_tanh = g_config['use_tanh']
     
     -- set initial block.
     local input_block = nn.Sequential()
@@ -50,17 +50,15 @@ function Generator.create_model(g_config)
 
     -- intermediate blocks.
     local ndim = nil
-    for i = 1, 7 do
-        ndim = ngf
+    for i = 1 , 8 do
         if i == 1 then
-            local inter_block = Generator.intermediate_block(ndim, false)
+            local inter_block, ndim = self:intermediate_block(ngf, false)
             model:add(inter_block)
         elseif i==2 or i==3 then
-            local inter_block = Generator.intermediate_block(ndim, false)
+            local inter_block, ndim = self:intermediate_block(ndim, false)
             model:add(inter_block)
-        elseif i==4 or i==5 or i==6 or i==7 then
-            for k = 1, (i-3) do ndim = ndim/2 end
-            local inter_block = Generator.intermediate_block(ndim, false)
+        elseif i==4, i==5 or i==6 or i==7 then
+            local inter_block, ndim = self:intermediate_block(ndim, false)
             model:add(inter_block)
         end
     end
@@ -73,14 +71,14 @@ function Generator.create_model(g_config)
     if flag_bn then output_block:add(SBatchNorm(ndim/2)) end
     if flag_lrelu then output_block:add(nn.LeakyReLU(0.2,true)) else output_block:add(nn.ReLU(true)) end
     -- conv2 (3x3)
-    output_block:add(SFullConv(ndim/2, ndim/2, 3, 3, 1, 1))
+    inter_block:add(SFullConv(ndim/2, ndim/2, 3, 3, 1, 1))
     if flag_bn then output_block:add(SBatchNorm(ndim/2)) end
     if flag_lrelu then output_block:add(nn.LeakyReLU(0.2,true)) else output_block:add(nn.ReLU(true)) end
     -- conv3 (1x1)
     output_block:add(SFullConv(ndim/2, nchannel, 1, 1))
     if flag_tanh then output_block:add(nn.Tanh()) end
     --output_block:add(Linear())            -- Linear activation is needed.
-    model:add(output_block)
+    model_add(output_block)
 
     return model
 end
@@ -94,14 +92,14 @@ function Generator.intermediate_block(ndim, halving)
     if halving then ngf = ndim/2 else ngf = ndim end
     -- conv1
     inter_block:add(SFullConv(ndim, ngf, 3, 3, 1, 1))
-    if flag_bn then inter_block:add(SBatchNorm(ngf)) end
-    if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
+    if flag_bn then input_block:add(SBatchNorm(ngf)) end
+    if flag_lrelu then input_block:add(nn.LeakyReLU(0.2,true)) else input_block:add(nn.ReLU(true)) end
     -- conv2
     inter_block:add(SFullConv(ngf, ngf, 3, 3, 1, 1))
-    if flag_bn then inter_block:add(SBatchNorm(ngf)) end
-    if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
+    if flag_bn then input_block:add(SBatchNorm(ngf)) end
+    if flag_lrelu then input_block:add(nn.LeakyReLU(0.2,true)) else input_block:add(nn.ReLU(true)) end
 
-    return inter_block
+    return inter_block, ngf  
 end
 
 return Generator
