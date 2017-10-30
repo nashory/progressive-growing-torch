@@ -1,5 +1,4 @@
--- Generator network structure for ALI.
-
+-- Generator network structure.
 
 local nn = require 'nn'
 
@@ -25,12 +24,12 @@ function Generator.weights_init(m)
 end
 
 -- Generator input context to noise
-function Generator.create_model(type, opt)
-	assert(type==64 or type==128 or type == 256, 'erorr. type argument must \'64\' or \'128\' or \'256\'.')
+function Generator.create_model(type, g_config)
+	--assert(type==64 or type==128 or type == 256, 'erorr. type argument must \'64\' or \'128\' or \'256\'.')
 
-	local nc = opt.nc
-	local nz = opt.nh
-	local ngf = opt.ngf
+	local nc = g_config.nc
+	local nz = g_config.nh
+	local ngf = g_config.ngf
 	local model = nn.Sequential()
     
     if type == 256 then

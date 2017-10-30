@@ -1,11 +1,8 @@
 require 'nn'
 require 'cunn'
 local opts = require 'script.opts'
---local gen = require 'models.gen'
---local dis = require 'models.dis'
-
-local gen = require 'models.original.gen'
-local dis = require 'models.original.dis'
+local gen = require 'models.gen'
+local dis = require 'models.dis'
 
 -- basic settings.
 torch.setdefaulttensortype('torch.FloatTensor')
@@ -33,26 +30,55 @@ local loader = paths.dofile('../data/data.lua')
 
 
 -- import trainer script.
-require 'script.began'
+require 'script.pggan'
+
+-- generator / discriminator parameter setting.
+g_config = {
+            'num_chanels': 1,
+            'resolution': 32,
+            'label_size': 0,
+            'fmap_base': 4096,
+            'fmap_decay': 1.0,
+            'fmap_max': 256,
+            'latent_size': nil,
+            'normalize_latents': true,
+            'use_wscale': true,
+            'use_pixelnorm': true,
+            'use_leakyrelu': true,
+            'use_batchnorm': false,
+            'use_tanh_at_end': nil,
+            }
+d_config = {
+            'num_chanels': 1,
+            'resolution': 32,
+            'label_size': 0,
+            'fmap_base': 4096,
+            'fmap_decay': 1.0,
+            'fmap_max': 256,
+            'use_wscale': true,
+            'fmap_gdrop': true,
+            'fmap_layernorm': false,
+}
+
+
 
 -- load players(gen, dis)
-local began_models = {}
-local began_dis = dis.create_model(opt.sampleSize, opt)         -- discriminator
-local began_gen = gen.create_model(opt.sampleSize, opt)         -- generator    
-began_models = {began_gen, began_dis}
-print ('BEGAN generator : ')    
-print(began_gen)
-print ('BEGAN discriminator(enc/dec) : ')
-print(began_dis)
+local gan_models = {}
+local gan_dis = dis.create_model(opt.sampleSize, d_config)         -- discriminator
+local gan_gen = gen.create_model(opt.sampleSize, g_config)         -- generator    
+gan_models = {gan_gen, gan_dis}
+print ('Generator structure: ')    
+print(gan_gen)
+print ('Discriminator structure: ')
+print(gan_dis)
 
 --loss metrics
-local began_criterion = {nn.AbsCriterion()}
---local began_criterion = {nn.SmoothL1Criterion()}
+local gan_criterion = {nn.MSECriterion()}
 
 -- run trainer
 local optimstate = {}
-local began_trainer = BEGAN(began_models, began_criterion, opt, optimstate)
-began_trainer:train(10000, loader)
+local gan_trainer = P_G_GAN(gan_models, gan_criterion, opt, optimstate)
+gan_trainer:train(10000, loader)
 
 
 print('Congrats! You just finished the training.')

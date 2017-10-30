@@ -1,13 +1,6 @@
 -- For training loop and learning rate scheduling.
--- BEGAN.
--- last modified : 2017.09.22, nashory
--- notation :   x --> real data (x)
---              x_tilde --> fake data (G(z))
---              x_ae --> auto-encoder output of x
---              x_tilde_ae --> auto-encoder output of x_tilde
-
-
-
+-- Progressive-growing GAN from NVIDIA.
+-- last modified : 2017.10.30, nashory
 
 require 'sys'
 require 'optim'
@@ -16,10 +9,10 @@ require 'math'
 local optimizer = require 'script.optimizer'
 
 
-local BEGAN = torch.class('BEGAN')
+local PGGAN = torch.class('PGGAN')
 
 
-function BEGAN:__init(model, criterion, opt, optimstate)
+function PGGAN:__init(model, criterion, opt, optimstate)
     self.model = model
     self.criterion = criterion
     self.optimstate = optimstate or {
@@ -52,7 +45,7 @@ function BEGAN:__init(model, criterion, opt, optimstate)
     self.crit_adv = criterion[1]:cuda()
 end
 
-BEGAN['fDx'] = function(self, x)
+PGGAN['fDx'] = function(self, x)
     self.dis:zeroGradParameters()
     
     -- generate noise(z_D)
@@ -83,7 +76,7 @@ BEGAN['fDx'] = function(self, x)
 end
 
 
-BEGAN['fGx'] = function(self, x)
+PGGAN['fGx'] = function(self, x)
     self.gen:zeroGradParameters()
    
     -- generate noise(z_G)
@@ -111,7 +104,7 @@ BEGAN['fGx'] = function(self, x)
 end
 
 
-function BEGAN:train(epoch, loader)
+function PGGAN:train(epoch, loader)
     -- Initialize data variables.
     self.noise = torch.Tensor(self.batchSize, self.nh)
 
@@ -182,7 +175,7 @@ function BEGAN:train(epoch, loader)
 end
 
 
-function BEGAN:snapshot(path, fname, iter, data)
+function PGGAN:snapshot(path, fname, iter, data)
     -- if dir not exist, create it.
     if not paths.dirp(path) then    os.execute(string.format('mkdir -p %s', path)) end
     
@@ -196,7 +189,7 @@ function BEGAN:snapshot(path, fname, iter, data)
 end
 
 
-return BEGAN
+return PGGAN
 
 
 
