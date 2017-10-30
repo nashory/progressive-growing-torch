@@ -1,4 +1,5 @@
 # progressive-growing-torch
+__YOUR CONTRIBUTION IS INVALUABLE FOR THIS PROJECT :)__
 Torch implementation of [PROGRESSIVE GROWING OF GANS FOR IMPROVED QUALITY, STABILITY, AND VARIATION](http://research.nvidia.com/sites/default/files/pubs/2017-10_Progressive-Growing-of//karras2017gan-paper.pdf)
 
 __Note: This project is in progress.__
