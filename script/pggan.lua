@@ -54,6 +54,11 @@ function PGGAN:__init(model, criterion, opt, optimstate)
     self.crit_adv = criterion[1]:cuda()
 end
 
+function PGGAN:getSamples(batchSize, resolution)
+    --local batch = self.dataset:sample()
+    local batch = self.dataset:getBatch()
+end
+
 function PGGAN:ResolutionScheduler()
     print('this function will schedule image resolution factor progressively.')
 end

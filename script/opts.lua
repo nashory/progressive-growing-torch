@@ -14,7 +14,7 @@ function M.parse(arg)
 
 
 	-------------- Frequently Changed options -----------
-	cmd:option('-gpuid', 0, 'which gpu to use. -1 = use CPU')
+	cmd:option('-gpuid', -1, 'which gpu to use. -1 = use CPU')
 	cmd:option('-name', 'CelebA_dcgan', 'experiments numbering.')
 	cmd:option('-snapshot_every', 5, 'will save models every N epoch.')
 	cmd:option('-loadSize', 80, 'resize the loaded image to load size maintatining aspect ratio.')
@@ -30,7 +30,7 @@ function M.parse(arg)
 
 
 	---------------- Data loading options ---------------
-	cmd:option('-data_root_train', '/home1/work/nashory/data/CelebA/Img')
+	cmd:option('-data_root_train', '/home/nashory/data/CelebA')
 	cmd:option('-nthreads', 8, '# of workers to use for data loading.')
 	cmd:option('-display', true, 'true : display server on / false : display server off')
 	cmd:option('-display_id', 10, 'display window id.')

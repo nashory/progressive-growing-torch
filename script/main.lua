@@ -1,5 +1,6 @@
 require 'nn'
-require 'cunn'
+
+--require 'cunn'
 local opts = require 'script.opts'
 local gen = require 'models.gen'
 --local dis = require 'models.dis'
@@ -25,9 +26,34 @@ if opt.gpuid >= 0 then
     cutorch.setDevice(opt.gpuid+1)          -- lua index starts from 1 ...
 end
 
--- create dataloader.
-local loader = paths.dofile('../data/data.lua')
 
+-- create dataloader.
+local myloader = require 'script.myloader'
+myloader.l_config.batchSize = 54
+myloader:renew(myloader.l_config)
+local batch = myloader:getBatch('train')
+print(batch:size())
+
+
+myloader.l_config.batchSize = 27
+myloader:renew(myloader.l_config)
+local batch = myloader:getBatch('train')
+print(batch:size())
+
+
+
+
+--local loader = paths.dofile('../data/data.lua')
+
+
+--local dataset = loader.new(8, opt)
+--local batch  = dataset:getBatch(45)
+--print(batch:size())
+
+--opt.batchSize = 24
+--local dataset = loader.new(8, opt)
+--local batch  = dataset:getBatch(45)
+--print(batch:size())
 
 -- import trainer script.
 require 'script.pggan'
@@ -69,6 +95,8 @@ local gan_gen = gen.create_model(g_config)         -- generator
 --gan_models = {gan_gen, gan_dis}
 print ('Generator structure: ')    
 print(gan_gen)
+
+
 
 
 --conv_nodes = gan_gen:findModules('nn.SpatialFullConvolution')
