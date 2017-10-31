@@ -2,7 +2,7 @@ require 'nn'
 require 'cunn'
 local opts = require 'script.opts'
 local gen = require 'models.gen'
-local dis = require 'models.dis'
+--local dis = require 'models.dis'
 
 -- basic settings.
 torch.setdefaulttensortype('torch.FloatTensor')
@@ -69,6 +69,14 @@ local gan_gen = gen.create_model(g_config)         -- generator
 --gan_models = {gan_gen, gan_dis}
 print ('Generator structure: ')    
 print(gan_gen)
+
+
+--conv_nodes = gan_gen:findModules('nn.SpatialFullConvolution')
+--for i = 1, #conv_nodes do
+--    print(conv_nodes[i].__typename)
+--end
+
+
 --print ('Discriminator structure: ')
 --print(gan_dis)
 

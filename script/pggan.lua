@@ -58,8 +58,13 @@ function PGGAN:ResolutionScheduler()
     print('this function will schedule image resolution factor progressively.')
 end
 
-function PGGAN:UpdateVarsExternally()
-    print('update layer variables externally (e.g. cur_lod in FadeInLayer)')
+-- update layer variables externally (e.g. cur_lod in FadeInLayer)
+function PGGAN:UpdateVarsExternally(model)
+    local targ_node = model:findModules('nn.FadeInLayer')
+    for i=1, #target_node do
+        print(targ_node[i].__typename)
+        --targ_node[i].cur_lod = xx
+    end
 end
 
 
