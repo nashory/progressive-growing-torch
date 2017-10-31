@@ -101,6 +101,11 @@ local gan_gen = network.get_init_gen(g_config)
 print ('Generator structure: ')    
 print(gan_gen)
 
+for i = 3, 9 do
+    print('----------------')
+    network.grow_network(gan_gen, gan_gen, i, g_config)
+    print(gan_gen)
+end
 --local gan_dis = dis.create_model(opt.sampleSize, d_config)         -- discriminator
 --local gan_gen = gen.create_model(g_config)         -- generator    
 --gan_models = {gan_gen, gan_dis}

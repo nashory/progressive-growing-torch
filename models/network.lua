@@ -17,10 +17,12 @@ function network.grow_network(gen, dis, resl, g_config)
     inter_block, ndim = G.intermediate_block(resl, g_config)
     gen:remove()                            -- remove last layer first,
     gen:add(inter_block)     -- add intermediate block second,
-    gen:add(G.output_block(ndim))               -- add output block last.
+    gen:add(G.output_block(ndim, g_config))               -- add output block last.
 
     -- grow discriminator next.
     -- will be implemented soon.
+    
+    return gen, dis
 end
 
 
