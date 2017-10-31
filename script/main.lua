@@ -2,7 +2,8 @@ require 'nn'
 
 --require 'cunn'
 local opts = require 'script.opts'
-local gen = require 'models.gen'
+--local gen = require 'models.gen'
+local network = require 'models.network'
 --local dis = require 'models.dis'
 
 -- basic settings.
@@ -26,7 +27,7 @@ if opt.gpuid >= 0 then
     cutorch.setDevice(opt.gpuid+1)          -- lua index starts from 1 ...
 end
 
-
+--[[
 -- create dataloader.
 local myloader = require 'script.myloader'
 myloader.l_config.batchSize = 54
@@ -39,7 +40,7 @@ myloader.l_config.batchSize = 27
 myloader:renew(myloader.l_config)
 local batch = myloader:getBatch('train')
 print(batch:size())
-
+]]--
 
 
 
@@ -54,6 +55,12 @@ print(batch:size())
 --local dataset = loader.new(8, opt)
 --local batch  = dataset:getBatch(45)
 --print(batch:size())
+
+
+
+
+-- create dataloader.
+local myloader = require 'script.myloader'
 
 -- import trainer script.
 require 'script.pggan'
@@ -90,11 +97,20 @@ d_config = {
 
 -- load players(gen, dis)
 local gan_models = {}
---local gan_dis = dis.create_model(opt.sampleSize, d_config)         -- discriminator
-local gan_gen = gen.create_model(g_config)         -- generator    
---gan_models = {gan_gen, gan_dis}
+local gan_gen = network.get_init_gen(g_config)
 print ('Generator structure: ')    
 print(gan_gen)
+
+--local gan_dis = dis.create_model(opt.sampleSize, d_config)         -- discriminator
+--local gan_gen = gen.create_model(g_config)         -- generator    
+--gan_models = {gan_gen, gan_dis}
+--print ('Generator structure: ')    
+--print(gan_gen)
+
+-- remove last layer.
+--gan_gen:remove()
+--print ('Generator structure after removal: ')    
+--print(gan_gen)
 
 
 

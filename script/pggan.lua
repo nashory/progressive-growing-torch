@@ -2,7 +2,7 @@
 -- Progressive-growing GAN from NVIDIA.
 -- last modified : 2017.10.30, nashory
 
--- 1 cycle = 1000 ticks
+-- 1 tick = 1K iter = 1000 iter.
 -- we do this since the batchsize varies depending on the image resolution.
 
 
