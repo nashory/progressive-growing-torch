@@ -14,9 +14,10 @@ local network = {}
 function network.grow_network(gen, dis, resl, g_config)
     local ngf = g_config.fmap_max           -- nfeatures = 512
     -- grow generator first.
+    inter_block, ndim = G.intermediate_block(resl, g_config)
     gen:remove()                            -- remove last layer first,
-    gen:add(G.intermediate_block())         -- add intermediate block second,
-    gen:add(G.output_block())               -- add output block last.
+    gen:add(inter_block)     -- add intermediate block second,
+    gen:add(G.output_block(ndim))               -- add output block last.
 
     -- grow discriminator next.
     -- will be implemented soon.
