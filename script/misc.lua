@@ -1,7 +1,6 @@
 -- tools for convenience.
 
 
-
 -- Image utils.
 function adjust_dyn_range(data, drange_in, drange_out)
     if not drange_in == drange_out then
@@ -28,14 +27,17 @@ end
 
 -- Logger.
 logger = {}
-function logger.init(filename)
-    pirnt('dffd')
+function logger.init(self, filename, data_field)
+    require 'optim'
+    self.loggerPath = filename
+    self.logger =optim.Logger(filename)
+    self.logger:setNames(data_field)          -- (e.g.) {'Training acc', 'Test acc.'}
 end
-function logger.write(data)
-    pirnt('dffd')
+function logger.write(self, data)
+    self.logger:add(data)
 end
-function logger.flush()
-    pirnt('dffd')
+function logger.flush(self)
+    os.execute(string.format('cat /dev/null > %s', self.loggerPath))
 end
 
 
