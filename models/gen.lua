@@ -117,6 +117,7 @@ function Generator.intermediate_block(resl, g_config)
     return inter_block, ndim
 end
 
+--[[
 function Generator.fadein_block(resl, g_config)
     local inter_block, ndim = Generator.intermediate_block(resl, g_config)
     local output_block = Generator.output_block(ndim, g_config)
@@ -128,7 +129,7 @@ function Generator.fadein_block(resl, g_config)
     fadein:add(nn.FadeInLayer(400))
     return fadein
 end
-
+]]--
     
 
 return Generator

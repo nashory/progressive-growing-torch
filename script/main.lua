@@ -104,8 +104,9 @@ print(gan_gen)
 for i = 3, 9 do
     print('----------------')
     network.grow_network(gan_gen, gan_gen, i, g_config)
-    print(gan_gen)
+    --print(gan_gen)
 end
+--print(gan_gen.modules[2])
 --local gan_dis = dis.create_model(opt.sampleSize, d_config)         -- discriminator
 --local gan_gen = gen.create_model(g_config)         -- generator    
 --gan_models = {gan_gen, gan_dis}

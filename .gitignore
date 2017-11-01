@@ -32,6 +32,7 @@
 Thumbs.db
 *.swp
 *.pyc
+*.swo
 
 # user generaged files.
 repo/

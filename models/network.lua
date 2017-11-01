@@ -13,25 +13,10 @@ local network = {}
 
 -- grow network
 function network.grow_network(gen, dis, resl, g_config)
-    local ngf = g_config.fmap_max           -- nfeatures = 512
-
     -- flush previous fade-in layer first.
-    --network.flush_FadeInBlock(gen)
-    --network.flush_FadeInLayer(dis)
-    
-    -- attach fade-in layer
-    --gen:add(G.fadein_block(resl, g_config))
-    
+    network.flush_FadeInBlock(gen, dis, resl, g_config)
+    -- attach new fade-in layer to the last.
     network.attach_FadeInBlock(gen, dis, resl, g_config)
-
-    -- grow generator first.
-    --inter_block, ndim = G.intermediate_block(resl, g_config)
-    --gen:remove()                            -- remove last layer first,
-    --gen:add(inter_block)     -- add intermediate block second,
-    --gen:add(G.output_block(ndim, g_config))               -- add output block last.
-
-    -- grow discriminator next.
-    -- will be implemented soon.
     return gen, dis
 end
 
@@ -52,14 +37,19 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config)
     fadein:add(nn.FadeInLayer(400))
     gen:add(fadein)
 
-    -- attach fade in layer.
-    --gen:add(G.fadein_block(resl, g_config))
     return gen, dis
 end
 
-function network.flush_FadeInBlock(gen, dis)
+function network.flush_FadeInBlock(gen, dis, resl, g_config)
+    -- remove from generator first.
     -- replace fade-in block with intermediate block.
     -- need to copy weights befroe the removal.
+    if resl>3 then 
+        high_resl_block = gen.modules[resl-2].modules[1].modules[2]:clone()
+        gen:remove()
+        gen:add(high_resl_block.modules[1])
+        gen:add(high_resl_block.modules[2])
+    end
     return gen, dis
 end
 
