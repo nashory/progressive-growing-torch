@@ -1,8 +1,8 @@
 -- network utilities.
 require 'torch'
 require 'nn'
-require 'cunn'
-require 'cudnn'
+--require 'cunn'
+--require 'cudnn'
 
 
 -- Pixel-wise normalization layer.
@@ -59,7 +59,7 @@ function FadeInLayer:updateOutput(input)
     
     -- linear interpolation
     self.alpha = self.life / (1.0*resl_transition_tick)
-    -- multiply.
+    -- multiply and add.
     self.output = torch.add(input[1]:mul(alpha), input[2]:mul(1.0-alpha))
     return self.output
 end
@@ -75,8 +75,6 @@ function FadeInLayer:updateGradInput(input, gradOutput)
 
     return self.gradInput
 end
-
-
 
 
 -- brought from: (https://github.com/ryankiros/layer-norm/blob/master/torch_modules/LayerNormalization.lua)

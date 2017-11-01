@@ -1,6 +1,7 @@
 -- Generator network structure.
 
 local nn = require 'nn'
+require 'models.custom_layer'
 
 
 local Generator = {}
@@ -115,6 +116,20 @@ function Generator.intermediate_block(resl, g_config)
     
     return inter_block, ndim
 end
+
+function Generator.fadein_block(resl, g_config)
+    local inter_block, ndim = Generator.intermediate_block(resl, g_config)
+    local output_block = Generator.output_block(ndim, g_config)
+    local fadein = nn.Sequential()
+    fadein:add( nn.ConcatTable()
+                :add(nn.Identity())                                      -- for low resolution
+                :add(nn.Sequential():add(inter_block):add(output_block)) -- for high resolution
+               )
+    fadein:add(nn.FadeInLayer(400))
+    return fadein
+end
+
+    
 
 return Generator
 
