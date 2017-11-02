@@ -2,8 +2,14 @@
 -- Progressive-growing GAN from NVIDIA.
 -- last modified : 2017.10.30, nashory
 
--- 1 tick = 1K iter = 1000 iter.
+-- 1 cycle = 1 tick x (transition_tick + training_tick)
+-- 1 tick = 1K images = (1K x batchsize) iters
 -- we do this since the batchsize varies depending on the image resolution.
+
+-- Notation:
+--      resl: resolution level
+--      x: real image
+--      x_tilde: fake image
 
 
 
@@ -17,7 +23,7 @@ local optimizer = require 'script.optimizer'
 
 
 local PGGAN = torch.class('PGGAN')
-
+TICK = 1000
 
 function PGGAN:__init(model, criterion, opt, optimstate, config)
     self.model = model
@@ -43,8 +49,12 @@ function PGGAN:__init(model, criterion, opt, optimstate, config)
     -- initial variables.
     self.config = config
     self.resl = 2                   -- range from [2, 10] --> [4, 1024]
+    self.kimgs = 0                  -- accumulated total number of images forwarded.
+    self.batch_table = { [4]=64, [8]=64, [16]=32, [32]=32, [64]=16, [128]=16, [256]=12, [512]=4, [1024]=1 }         -- slightly different from the paper.
+    self.transition_tick = opt.transition_tick
+    self.training_tick = opt.training_tick
+    self.flag_flush = true
 
-    self.batch_table = { [4]=64, [8]=64, [16]=32, [32]=32, [64]=16, [128]=16, [256]=14, [512]=6, [1024]=3 }         -- slightly different from the paper.
 
     
     -- generate test_noise(fixed)
@@ -63,8 +73,34 @@ function PGGAN:__init(model, criterion, opt, optimstate, config)
     self.crit_adv = criterion[1]:cuda()
 end
 
+
+-- this function will schedule image resolution factor(resl) progressively.
+-- should be called every iteration to ensure kimgs is counted properly.
 function PGGAN:ResolutionScheduler()
-    print('this function will schedule image resolution factor progressively.')
+
+    local batchSize = self.batch_table[math.pow(2,math.floor(self.resl))]
+    self.kimgs = self.kimgs + batchSize
+    if self.kimgs > TICK then
+        -- increase linearly every tick, and grow network structure.
+        local prev_resl = math.floor(self.resl)
+        self.resl = self.resl + 1.0/(self.transition_tick + self.training_tick)
+        -- clamping, range: 4 ~ 1024
+        self.resl = math.max(2, math.min(10, self.resl))
+
+        -- remove fade-in block
+        if self.resl%1.0 > (1.0*self.transition_tick)/(self.transition_tick+self.training_tick) then
+            if self.flag_flush then
+                network.flush_FadeInBlock(self.gen, self.dis, math.floor(self.resl))
+                self.flag_flush = false
+            end
+        end
+        -- grow network
+        if math.floor(self.resl) ~= prev_resl then
+            self.flag_flush = true
+            network.grow_network(self.gen, self.dis, math.floor(self.resl),
+                                 self.config.G, self.config.D, true)
+        end
+    end
 end
 
 function PGGAN:test()
@@ -73,8 +109,18 @@ function PGGAN:test()
     if self.noisetype == 'uniform' then self.noise:uniform(-1,1)
     elseif self.noisetype == 'normal' then self.noise:normal(0,1) end
     
-    local x_tilde = self.gen:forward(self.noise:cuda()) 
+    local x_tilde = self.gen:forward(self.noise:cuda())
     print(x_tilde:size())
+    local predict = self.dis:forward(x_tilde:cuda())
+    print(predict:size())
+end
+
+
+PGGAN['fDx'] = function(self, x)
+    print('fDx')
+end
+PGGAN['fGx'] = function(self, x)
+    print('fDx')
 end
 
 
@@ -87,17 +133,24 @@ function PGGAN:train(epoch, loader)
     self.param_gen, self.gradParam_gen = self.gen:getParameters()
     self.param_dis, self.gradParam_dis = self.dis:getParameters()
 
- 
+    local globalIter = 0
+    for cycle = 1, (self.transition_tick+self.training_tick) do
+        for tick = 1, TICK do
+            -- calculate iteration.
+            local iter_per_epoch = math.ceil(self.loader:size()/self.batchSize)
+            globalIter = globalIter + 1
+            
+            -- grow network automatically.
+            self:ResolutionScheduler()
+        end
+    end
+end
 
-    --[[
-    local totalIter = 0
-    for e = 1, epoch do
-        -- get max iteration for 1 epcoh.
-        local iter_per_epoch = math.ceil(self.loader:size()/self.batchSize)
-        for iter  = 1, iter_per_epoch do
-            totalIter = totalIter + 1
-            self:test()
-
+            
+            
+            
+            --self:test()
+            --[[
             -- forward/backward and update weights with optimizer.
             -- DO NOT CHANGE OPTIMIZATION ORDER.
             local err_dis = self:fDx()
@@ -118,10 +171,7 @@ function PGGAN:train(epoch, loader)
             -- logging
             --local log_msg = string.format('Epoch: [%d][%6d/%6d]  D(real): %.4f | D(fake): %.4f | G: %.4f | Delta: %.4f | kt: %.6f | Convergence: %.4f', e, iter, iter_per_epoch, err_dis.real, err_dis.fake, err_gen.err, err_gen.delta, self.kt, self.measure)
             --print(log_msg)
-        end
-    end
-    ]]--
-end
+            ]]--
 
 
 --[[
@@ -294,37 +344,37 @@ end
 ----------------------------------- Debugging functions --------------------------------------
 
 
-function PGGAN:__debug__gen_output()
-    print(self.gen)
+function PGGAN:__debug__output()
+    print(self.dis)
     self.resl = self.resl + 1
     self:test()
     network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
-    print(self.gen)
+    print(self.dis)
     self.resl = self.resl + 1
     self:test() 
     network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
-    print(self.gen)
+    print(self.dis)
     self.resl = self.resl + 1
     self:test() 
     network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
-    print(self.gen)
+    print(self.dis)
     self.resl = self.resl + 1
     self:test() 
     network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
-    print(self.gen)
+    print(self.dis)
     self.resl = self.resl + 1
     self:test() 
     network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
-    print(self.gen)
+    print(self.dis)
     self.resl = self.resl + 1
     self:test() 
     network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
-    print(self.gen)
+    print(self.dis)
     self.resl = self.resl + 1
     self:test() 
     print('-----')
     network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
-    print(self.gen)
+    print(self.dis)
     self.resl = self.resl + 1
     self:test() 
 end

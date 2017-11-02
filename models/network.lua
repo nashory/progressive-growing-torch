@@ -6,6 +6,7 @@ require 'nn'
 require 'cunn'
 require 'cudnn'
 require 'cutorch'
+require 'math'
 require 'models.custom_layer'
 local G = require 'models.gen'
 local D = require 'models.dis'
@@ -16,12 +17,15 @@ local network = {}
 
 -- grow network
 function network.grow_network(gen, dis, resl, g_config, d_config, use_cuda)
+
     local use_cuda = use_cuda or true
     assert(type(use_cuda)=='boolean', 'use_cuda flag = true/false')
+
     -- flush previous fade-in layer first.
-    network.flush_FadeInBlock(gen, dis, resl)
+    --network.flush_FadeInBlock(gen, dis, resl)
+    
     -- attach new fade-in layer to the last.
-    if resl < 10 then
+    if resl >2 and resl < 10 then
         network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
     end
     if use_cuda then gen:cuda(); dis:cuda(); end
@@ -32,6 +36,8 @@ end
 function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
     -- generator.
     -- make deep copy of last block and delete it.
+    print(string.format('[From:%d, To:%d] Growing networks ... It might take few seconds... [Generator]',
+                                                                            math.pow(2,resl), math.pow(2,resl+1)))
     low_res_block = gen.modules[resl-1]:clone()
     gen:remove()
     -- now, make residual block and add fade-in layer.
@@ -47,6 +53,8 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
 
     -- discriminator
     -- make deep copy of first block and delete it.
+    print(string.format('[From:%d, To:%d] Growing networks ... It might take few seconds... [Discriminator]',
+                                                                            math.pow(2,resl-1), math.pow(2,resl)))
     low_res_block = dis.modules[1]:clone()
     dis:remove(1)
     -- now, make residual block and add fade-in layer.
@@ -67,8 +75,8 @@ function network.flush_FadeInBlock(gen, dis, resl)
     -- remove from generator and discriminator.
     -- replace fade-in block with intermediate block.
     -- need to copy weights befroe the removal.
-    if resl>3 then 
-        local high_resl_block = gen.modules[resl-2].modules[1].modules[2]:clone()
+    if resl>=3 and resl<=9 then 
+        local high_resl_block = gen.modules[resl-1].modules[1].modules[2]:clone()
         gen:remove()
         gen:add(high_resl_block.modules[1])
         gen:add(high_resl_block.modules[2])

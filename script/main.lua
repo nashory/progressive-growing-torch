@@ -88,6 +88,12 @@ d_config = {
             ['use_wscale']=true,
             ['fmap_gdrop']=true,
             ['fmap_layernorm']=false,
+            ['normalize_latents']=true,
+            ['use_wscale']=true,
+            ['use_pixelnorm']=true,
+            ['use_leakyrelu']=true,
+            ['use_batchnorm']=false,
+            ['use_tanh']=true,
 }
 
 config = {

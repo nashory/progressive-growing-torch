@@ -50,6 +50,12 @@ function M.parse(arg)
 	cmd:option('-ndf', 64, 'output dimension of first conv layer of discriminator.')
 	cmd:option('-nc', 3, 'input image channel. (rgb:3, gray:1)')
 	cmd:option('-nz', 512, '# of dimension for input noise(z)')
+
+    --------------- Progressive Growing options -------------
+	cmd:option('-transition_tick', 300, 'ticks for transition (1 tick = 1K iter)')
+	cmd:option('-training_tick', 300, 'ticks for training (1 tick = 1K iter)')
+
+
 	cmd:text()
 
 	-- return opt.

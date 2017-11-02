@@ -46,18 +46,24 @@ function FadeInLayer:__init(resl_transition_tick)
     self.alpha = 0
     self.iter = 0
     self.life = self.transition_tick
+    self.complete = 0
+    self.accum = 0              -- accumulated processed images.
 end
 -- input[1]: from low resolution / input[2]: from high resolution
 function FadeInLayer:updateOutput(input)
     assert(type(input)=='table')
 
+    local batchSize = input[1]:size(1)
+    self.accum = self.accum + batchSize
     if self.life > 0 then
-        self.iter = self.iter+1
-        if self.iter%1000 == 0 then self.life = self.life-1 end
+        if self.accum > 1000 then
+            self.life = self.life-1         -- decrease 1 tick.
+            self.accum = self.accum%1000
+        end
     elseif self.life < 0 then
-        self.life = 0
+        self.life = 0                        -- defense unforeseen exception.
     end
-    
+
     -- linear interpolation
     self.alpha = self.life / (1.0*self.transition_tick)
     -- multiply and add.

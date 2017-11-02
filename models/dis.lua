@@ -58,12 +58,12 @@ function Discrim.output_block(d_config)
     if flag_bn then output_block:add(SBatchNorm(ndf)) end
     if flag_lrelu then output_block:add(nn.LeakyReLU(0.2,true)) else output_block:add(nn.ReLU(true)) end
     -- conv2 (4x4)
-    output_block:add(SConv(ndf, ndf, 4, 4, 2, 2, 1, 1)
+    output_block:add(SConv(ndf, ndf, 4, 4)
                         :init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
     if flag_bn then output_block:add(SBatchNorm(ndf)) end
     if flag_lrelu then output_block:add(nn.LeakyReLU(0.2,true)) else output_block:add(nn.ReLU(true)) end
     -- Linear
-    output_block:add(nn.View(-1))
+    output_block:add(nn.View(-1, ndf))
     output_block:add(nn.Linear(ndf, 1))
     output_block:add(nn.Sigmoid())
     return output_block, ndf
@@ -101,6 +101,7 @@ function Discrim.intermediate_block(resl, d_config)
                             :init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
         if flag_bn then inter_block:add(SBatchNorm(ndim*2)) end
         if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
+        inter_block:add(AvgPool(2,2,2,2))
     else 
         inter_block:add(SConv(ndim, ndim, 3, 3, 1, 1, 1, 1)
                             :init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
@@ -110,6 +111,7 @@ function Discrim.intermediate_block(resl, d_config)
                             :init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
         if flag_bn then inter_block:add(SBatchNorm(ndim)) end
         if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
+        inter_block:add(AvgPool(2,2,2,2))
     end
     
     return inter_block, ndim
