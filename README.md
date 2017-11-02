@@ -7,6 +7,12 @@ __Note: This project is in progress.__
 ![image](http://research.nvidia.com/sites/default/files/publications/representative_image_512x256.png)
 
 
+## To-Do List
+- [X] Equalized learning rate (weight normalization)
+- [X] Pixel-wise norm
+- [X] Support WGAN-GP loss
+
+
 ## Prerequisites
 to be updated...
 
