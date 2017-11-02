@@ -14,7 +14,10 @@ __Note: This project is in progress.__
 
 
 ## Prerequisites
-to be updated...
++ [Torch7](http://torch.ch/docs/getting-started.html#_)
++ [display](https://github.com/szym/display)
++ [nninit](https://github.com/Kaixhin/nninit)
+
 
 ## How to use?
 to be updated...
@@ -22,8 +25,12 @@ to be updated...
 ## Experimental results
 to be updated...
 
+## Compatability
+to be updated...
+
 ## Acknowledgement
 + [tkarras/progressive_growing_of_gans](https://github.com/tkarras/progressive_growing_of_gans)
++ [soumith/dcgan.torch](https://github.com/soumith/dcgan.torch)
 
 ## Author
 MinchulShin, [@nashory](https://github.com/nashory)
