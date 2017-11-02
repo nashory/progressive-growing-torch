@@ -3,25 +3,33 @@
 
 
 require 'nn'
+require 'cunn'
+require 'cudnn'
+require 'cutorch'
 require 'models.custom_layer'
 local G = require 'models.gen'
---local D = require 'models.dis'
+local D = require 'models.dis'
 
 
 local network = {}
 
 
 -- grow network
-function network.grow_network(gen, dis, resl, g_config)
+function network.grow_network(gen, dis, resl, g_config, d_config, use_cuda)
+    local use_cuda = use_cuda or true
+    assert(type(use_cuda)=='boolean', 'use_cuda flag = true/false')
     -- flush previous fade-in layer first.
-    network.flush_FadeInBlock(gen, dis, resl, g_config)
+    network.flush_FadeInBlock(gen, dis, resl)
     -- attach new fade-in layer to the last.
-    network.attach_FadeInBlock(gen, dis, resl, g_config)
+    if resl < 10 then
+        network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
+    end
+    if use_cuda then gen:cuda(); dis:cuda(); end
     return gen, dis
 end
 
 
-function network.attach_FadeInBlock(gen, dis, resl, g_config)
+function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
     -- generator.
     -- make deep copy of last block and delete it.
     low_res_block = gen.modules[resl-1]:clone()
@@ -31,41 +39,64 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config)
     local output_block = G.output_block(ndim, g_config)
     local fadein = nn.Sequential()
     fadein:add( nn.ConcatTable()
-                :add(low_res_block)                                         -- for low resl
-                :add(nn.Sequential():add(inter_block):add(output_block))    -- for high resl
-                )
+                :add(nn.Sequential():add(low_res_block):add(nn.SpatialUpSamplingNearest(2.0)))  -- for low resl
+                :add(nn.Sequential():add(inter_block):add(output_block)))                       -- for high resl
     fadein:add(nn.FadeInLayer(400))
     gen:add(fadein)
+    fadein = nil
+
+    -- discriminator
+    -- make deep copy of first block and delete it.
+    low_res_block = dis.modules[1]:clone()
+    dis:remove(1)
+    -- now, make residual block and add fade-in layer.
+    local inter_block, ndim = D.intermediate_block(resl, d_config)
+    local input_block = D.input_block(ndim, d_config)
+    local fadein = nn.Sequential()
+    fadein:add( nn.ConcatTable()
+                :add(nn.Sequential():add(low_res_block):add(nn.SpatialAveragePooling(2,2,2,2)))
+                :add(nn.Sequential():add(input_block):add(inter_block)))
+    fadein:add(nn.FadeInLayer(400))
+    dis:insert(fadein,1)
+    fadein = nil
 
     return gen, dis
 end
 
-function network.flush_FadeInBlock(gen, dis, resl, g_config)
-    -- remove from generator first.
+function network.flush_FadeInBlock(gen, dis, resl)
+    -- remove from generator and discriminator.
     -- replace fade-in block with intermediate block.
     -- need to copy weights befroe the removal.
     if resl>3 then 
-        high_resl_block = gen.modules[resl-2].modules[1].modules[2]:clone()
+        local high_resl_block = gen.modules[resl-2].modules[1].modules[2]:clone()
         gen:remove()
         gen:add(high_resl_block.modules[1])
         gen:add(high_resl_block.modules[2])
+        local high_resl_block = dis.modules[1].modules[1].modules[2]:clone()
+        dis:remove(1)
+        dis:insert(high_resl_block.modules[2], 1)
+        dis:insert(high_resl_block.modules[1], 1)
     end
     return gen, dis
 end
 
 
--- return initial structure of discriminator.
+-- return initial structure of generator.
 function network.get_init_gen(g_config)
     local model = nn.Sequential()
-    local input_block, nOut = G.input_block(g_config)
+    local input_block, ndim = G.input_block(g_config)
     model:add(input_block)
-    model:add(G.output_block(nOut, g_config))
+    model:add(G.output_block(ndim, g_config))
     return model
 end
 
--- return initial structure of generator.
-function network.get_init_dis(g_config)
-    print('discriminator')
+-- return initial structure of discriminator.
+function network.get_init_dis(d_config)
+    local model = nn.Sequential()
+    local output_block, ndim = D.output_block(d_config) 
+    model:add(D.input_block(ndim, d_config))
+    model:add(output_block)
+    return model
 end
 
 return network

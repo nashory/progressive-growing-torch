@@ -51,16 +51,17 @@ end
 function FadeInLayer:updateOutput(input)
     assert(type(input)=='table')
 
-    self.iter = self.iter+1
-    if self.iter%1000 == 0 then
-        self.iter = 0
-        self.life = self.life-1
+    if self.life > 0 then
+        self.iter = self.iter+1
+        if self.iter%1000 == 0 then self.life = self.life-1 end
+    elseif self.life < 0 then
+        self.life = 0
     end
     
     -- linear interpolation
-    self.alpha = self.life / (1.0*resl_transition_tick)
+    self.alpha = self.life / (1.0*self.transition_tick)
     -- multiply and add.
-    self.output = torch.add(input[1]:mul(alpha), input[2]:mul(1.0-alpha))
+    self.output = torch.add(input[1]:mul(self.alpha), input[2]:mul(1.0-self.alpha))
     return self.output
 end
 function FadeInLayer:updateGradInput(input, gradOutput)

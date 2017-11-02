@@ -12,13 +12,14 @@ require 'sys'
 require 'optim'
 require 'image'
 require 'math'
+local network = require 'models.network'
 local optimizer = require 'script.optimizer'
 
 
 local PGGAN = torch.class('PGGAN')
 
 
-function PGGAN:__init(model, criterion, opt, optimstate)
+function PGGAN:__init(model, criterion, opt, optimstate, config)
     self.model = model
     self.criterion = criterion
     self.optimstate = optimstate or {
@@ -27,7 +28,7 @@ function PGGAN:__init(model, criterion, opt, optimstate)
     self.opt = opt
     self.noisetype = opt.noisetype
     self.nc = opt.nc
-    self.nh = opt.nh
+    self.nz = opt.nz
     self.gamma = opt.gamma
     self.lambda = opt.lambda
     self.kt = 0         -- initialize same with the paper.
@@ -35,11 +36,19 @@ function PGGAN:__init(model, criterion, opt, optimstate)
     self.sampleSize = opt.sampleSize
     self.thres = 1.0
 
-    self.batch_table = { [4]=50, [8]=50, [16]=50, [32]=20, [64]=10, [128]=10, [256]=5, [512]=2, [1024]=1 }
+    -- init dataloader.
+    self.loader = require 'script.myloader'
+    self.loader:renew(self.loader.l_config)
+
+    -- initial variables.
+    self.config = config
+    self.resl = 2                   -- range from [2, 10] --> [4, 1024]
+
+    self.batch_table = { [4]=64, [8]=64, [16]=32, [32]=32, [64]=16, [128]=16, [256]=14, [512]=6, [1024]=3 }         -- slightly different from the paper.
 
     
     -- generate test_noise(fixed)
-    self.test_noise = torch.Tensor(64, self.nh)
+    self.test_noise = torch.Tensor(64, self.nz, 1, 1)
     if self.noisetype == 'uniform' then self.test_noise:uniform(-1,1)
     elseif self.noisetype == 'normal' then self.test_noise:normal(0,1) end
     
@@ -53,6 +62,69 @@ function PGGAN:__init(model, criterion, opt, optimstate)
     self.dis = model[2]:cuda()
     self.crit_adv = criterion[1]:cuda()
 end
+
+function PGGAN:ResolutionScheduler()
+    print('this function will schedule image resolution factor progressively.')
+end
+
+function PGGAN:test()
+    -- generate noise(z_D)
+    self.noise = torch.Tensor(self.batch_table[math.pow(2, self.resl)], self.nz, 1, 1)
+    if self.noisetype == 'uniform' then self.noise:uniform(-1,1)
+    elseif self.noisetype == 'normal' then self.noise:normal(0,1) end
+    
+    local x_tilde = self.gen:forward(self.noise:cuda()) 
+    print(x_tilde:size())
+end
+
+
+
+function PGGAN:train(epoch, loader)
+    -- get network weights.
+    print(string.format('Dataset size :  %d', self.loader:size()))
+    self.gen:training()
+    self.dis:training()
+    self.param_gen, self.gradParam_gen = self.gen:getParameters()
+    self.param_dis, self.gradParam_dis = self.dis:getParameters()
+
+ 
+
+    --[[
+    local totalIter = 0
+    for e = 1, epoch do
+        -- get max iteration for 1 epcoh.
+        local iter_per_epoch = math.ceil(self.loader:size()/self.batchSize)
+        for iter  = 1, iter_per_epoch do
+            totalIter = totalIter + 1
+            self:test()
+
+            -- forward/backward and update weights with optimizer.
+            -- DO NOT CHANGE OPTIMIZATION ORDER.
+            local err_dis = self:fDx()
+            local err_gen = self:fGx()
+
+            -- weight update.
+            optimizer.dis.method(self.param_dis, self.gradParam_dis, optimizer.dis.config.lr,
+                                optimizer.dis.config.beta1, optimizer.dis.config.beta2,
+                                optimizer.dis.config.elipson, optimizer.dis.optimstate)
+            optimizer.gen.method(self.param_gen, self.gradParam_gen, optimizer.gen.config.lr,
+                                optimizer.gen.config.beta1, optimizer.gen.config.beta2,
+                                optimizer.gen.config.elipson, optimizer.gen.optimstate)
+
+            -- save model at every specified epoch.
+            --local data = {dis = self.dis, gen = self.gen}
+            --self:snapshot(string.format('repo/%s', self.opt.name), self.opt.name, totalIter, data)
+
+            -- logging
+            --local log_msg = string.format('Epoch: [%d][%6d/%6d]  D(real): %.4f | D(fake): %.4f | G: %.4f | Delta: %.4f | kt: %.6f | Convergence: %.4f', e, iter, iter_per_epoch, err_dis.real, err_dis.fake, err_gen.err, err_gen.delta, self.kt, self.measure)
+            --print(log_msg)
+        end
+    end
+    ]]--
+end
+
+
+--[[
 
 function PGGAN:getSamples(batchSize, resolution)
     --local batch = self.dataset:sample()
@@ -216,7 +288,46 @@ function PGGAN:snapshot(path, fname, iter, data)
         print('[Snapshot]: saved model @ ' .. save_path)
     end
 end
+]]--
 
+
+----------------------------------- Debugging functions --------------------------------------
+
+
+function PGGAN:__debug__gen_output()
+    print(self.gen)
+    self.resl = self.resl + 1
+    self:test()
+    network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
+    print(self.gen)
+    self.resl = self.resl + 1
+    self:test() 
+    network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
+    print(self.gen)
+    self.resl = self.resl + 1
+    self:test() 
+    network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
+    print(self.gen)
+    self.resl = self.resl + 1
+    self:test() 
+    network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
+    print(self.gen)
+    self.resl = self.resl + 1
+    self:test() 
+    network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
+    print(self.gen)
+    self.resl = self.resl + 1
+    self:test() 
+    network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
+    print(self.gen)
+    self.resl = self.resl + 1
+    self:test() 
+    print('-----')
+    network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
+    print(self.gen)
+    self.resl = self.resl + 1
+    self:test() 
+end
 
 return PGGAN
 

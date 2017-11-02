@@ -27,6 +27,8 @@ if opt.gpuid >= 0 then
     cutorch.setDevice(opt.gpuid+1)          -- lua index starts from 1 ...
 end
 
+
+
 --[[
 -- create dataloader.
 local myloader = require 'script.myloader'
@@ -42,11 +44,7 @@ local batch = myloader:getBatch('train')
 print(batch:size())
 ]]--
 
-
-
 --local loader = paths.dofile('../data/data.lua')
-
-
 --local dataset = loader.new(8, opt)
 --local batch  = dataset:getBatch(45)
 --print(batch:size())
@@ -60,10 +58,9 @@ print(batch:size())
 
 
 -- create dataloader.
-local myloader = require 'script.myloader'
+--local myloader = require 'script.myloader'
 
--- import trainer script.
-require 'script.pggan'
+
 
 -- generator / discriminator parameter setting.
 g_config = {
@@ -82,30 +79,44 @@ g_config = {
             ['use_tanh']=true,
             }
 d_config = {
-            ['num_chanels']=1,
+            ['num_channels']=3,
             ['resolution']=32,
             ['label_size']=0,
             ['fmap_base']=4096,
             ['fmap_decay']=1.0,
-            ['fmap_max']=256,
+            ['fmap_max']=512,
             ['use_wscale']=true,
             ['fmap_gdrop']=true,
             ['fmap_layernorm']=false,
 }
 
-
+config = {
+            ['D']=d_config,
+            ['G']=g_config,
+}
 
 -- load players(gen, dis)
 local gan_models = {}
 local gan_gen = network.get_init_gen(g_config)
-print ('Generator structure: ')    
-print(gan_gen)
+local gan_dis = network.get_init_dis(d_config)
+--print ('Generator structure: ')    
+--print(gan_gen)
+--print ('Discriminator structure: ')    
+--print(gan_dis)
 
-for i = 3, 9 do
+
+gan_models = {gan_gen, gan_dis}
+
+
+--[[
+for i = 3, 4 do
     print('----------------')
-    network.grow_network(gan_gen, gan_gen, i, g_config)
-    --print(gan_gen)
+    network.grow_network(gan_gen, gan_dis, i, g_config, d_config)
+    --print(gan_dis)
 end
+]]--
+
+
 --print(gan_gen.modules[2])
 --local gan_dis = dis.create_model(opt.sampleSize, d_config)         -- discriminator
 --local gan_gen = gen.create_model(g_config)         -- generator    
@@ -130,13 +141,16 @@ end
 --print ('Discriminator structure: ')
 --print(gan_dis)
 
---loss metrics
---local gan_criterion = {nn.MSECriterion()}
+-- loss metrics
+local gan_criterion = {nn.MSECriterion()}
+
+
 
 -- run trainer
---local optimstate = {}
---local gan_trainer = P_G_GAN(gan_models, gan_criterion, opt, optimstate)
---gan_trainer:train(10000, loader)
+require 'script.pggan'
+local optimstate = {}
+local gan_trainer = PGGAN(gan_models, gan_criterion, opt, optimstate, config)
+gan_trainer:train(10000, myloader)
 
 
 print('Congrats! You just finished the training.')

@@ -40,6 +40,10 @@ function myloader:getBatch(target)
     return dataset:getBatch(target)
 end
 
+function myloader:size()
+    return dataset:size()
+end
+
 return myloader
 
 
