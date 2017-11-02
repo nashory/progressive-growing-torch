@@ -1,4 +1,5 @@
 -- tools for convenience.
+require 'optim'
 
 
 -- Image utils.
@@ -30,7 +31,7 @@ logger = {}
 function logger.init(self, filename, data_field)
     require 'optim'
     self.loggerPath = filename
-    self.logger =optim.Logger(filename)
+    self.logger = optim.Logger(filename)
     self.logger:setNames(data_field)          -- (e.g.) {'Training acc', 'Test acc.'}
 end
 function logger.write(self, data)

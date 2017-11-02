@@ -54,6 +54,7 @@ function M.parse(arg)
     --------------- Progressive Growing options -------------
 	cmd:option('-transition_tick', 2, 'ticks for transition (1 tick = 1K iter)')
 	cmd:option('-training_tick', 2, 'ticks for training (1 tick = 1K iter)')
+	cmd:option('-total_tick', 10000, 'ticks for entire training (1 tick = 1K iter)')
 
 
 	cmd:text()

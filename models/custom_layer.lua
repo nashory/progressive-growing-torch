@@ -49,16 +49,16 @@ end
 function FadeInLayer:updateOutput(input)
     assert(type(input)=='table')
 
-    local batchSize = input[1]:size(1)
+    -- multiply and add.
+    self.output = torch.add(input[1]:mul(1.0-self.alpha), input[2]:mul(self.alpha))
+    return self.output
+end
+function FadeInLayer:updateAlpha(batchSize)
     self.accum = self.accum + batchSize
-
     -- linear interpolation
     self.alpha = (self.accum) / (self.transition_tick*1000.0)
     self.alpha = math.max(0, math.min(1, self.alpha))
-    -- multiply and add.
-    self.output = torch.add(input[1]:mul(1.0-self.alpha), input[2]:mul(self.alpha))
     self.complete = (self.alpha)*100.0
-    return self.output
 end
 function FadeInLayer:updateGradInput(input, gradOutput)
     -- init gradInput tensor.
