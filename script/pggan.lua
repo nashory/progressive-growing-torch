@@ -54,6 +54,8 @@ function PGGAN:__init(model, criterion, opt, optimstate, config)
     self.transition_tick = opt.transition_tick
     self.training_tick = opt.training_tick
     self.flag_flush = true
+    self.complete = 100.0
+    self.globalTick = 0
 
 
     
@@ -79,8 +81,10 @@ end
 function PGGAN:ResolutionScheduler()
 
     local batchSize = self.batch_table[math.pow(2,math.floor(self.resl))]
+    local prev_kimgs = self.kimgs
     self.kimgs = self.kimgs + batchSize
-    if self.kimgs > TICK then
+    if (self.kimgs%TICK) < (prev_kimgs%TICK) then
+        self.globalTick = self.globalTick + 1
         -- increase linearly every tick, and grow network structure.
         local prev_resl = math.floor(self.resl)
         self.resl = self.resl + 1.0/(self.transition_tick + self.training_tick)
@@ -101,6 +105,10 @@ function PGGAN:ResolutionScheduler()
                                  self.config.G, self.config.D, true)
         end
     end
+    fadein_nodes = self.gen:findModules('nn.FadeInLayer')
+    if #fadein_nodes~=0 then
+        self.complete = fadein_nodes[1].complete
+    end
 end
 
 function PGGAN:test()
@@ -117,8 +125,15 @@ end
 
 
 PGGAN['fDx'] = function(self, x)
-    print('fDx')
+    -- generate noise(z_D)
+    self.noise = torch.Tensor(self.batch_table[math.pow(2, math.floor(self.resl))], self.nz, 1, 1)
+    if self.noisetype == 'uniform' then self.noise:uniform(-1,1)
+    elseif self.noisetype == 'normal' then self.noise:normal(0,1) end
+    
+    local x_tilde = self.gen:forward(self.noise:cuda())
+    local predict = self.dis:forward(x_tilde:cuda())
 end
+
 PGGAN['fGx'] = function(self, x)
     print('fDx')
 end
@@ -134,14 +149,16 @@ function PGGAN:train(epoch, loader)
     self.param_dis, self.gradParam_dis = self.dis:getParameters()
 
     local globalIter = 0
-    for cycle = 1, (self.transition_tick+self.training_tick) do
-        for tick = 1, TICK do
-            -- calculate iteration.
-            local iter_per_epoch = math.ceil(self.loader:size()/self.batchSize)
+    -- calculate iteration.
+    local iter_per_epoch = math.ceil(self.loader:size()/self.batchSize)
+    for e = 1, epoch do
+        for iter = 1, iter_per_epoch do
             globalIter = globalIter + 1
-            
             -- grow network automatically.
             self:ResolutionScheduler()
+            self:fDx()
+
+            print(string.format('Iter: %d | Tick:%d | Tranition: %.2f', globalIter, self.globalTick, self.complete))
         end
     end
 end

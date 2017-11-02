@@ -70,6 +70,7 @@ g_config = {
             ['fmap_base']=4096,
             ['fmap_decay']=1.0,
             ['fmap_max']=512,
+            ['transition_tick']=opt.transition_tick,
             ['nz']=512,
             ['normalize_latents']=true,
             ['use_wscale']=true,

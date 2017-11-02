@@ -38,6 +38,7 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
     -- make deep copy of last block and delete it.
     print(string.format('[From:%d, To:%d] Growing networks ... It might take few seconds... [Generator]',
                                                                             math.pow(2,resl), math.pow(2,resl+1)))
+    local transition_tick = g_config['transition_tick']                                                                        
     low_res_block = gen.modules[resl-1]:clone()
     gen:remove()
     -- now, make residual block and add fade-in layer.
@@ -47,7 +48,7 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
     fadein:add( nn.ConcatTable()
                 :add(nn.Sequential():add(low_res_block):add(nn.SpatialUpSamplingNearest(2.0)))  -- for low resl
                 :add(nn.Sequential():add(inter_block):add(output_block)))                       -- for high resl
-    fadein:add(nn.FadeInLayer(400))
+    fadein:add(nn.FadeInLayer(transition_tick))
     gen:add(fadein)
     fadein = nil
 
@@ -64,7 +65,7 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
     fadein:add( nn.ConcatTable()
                 :add(nn.Sequential():add(low_res_block):add(nn.SpatialAveragePooling(2,2,2,2)))
                 :add(nn.Sequential():add(input_block):add(inter_block)))
-    fadein:add(nn.FadeInLayer(400))
+    fadein:add(nn.FadeInLayer(transition_tick))
     dis:insert(fadein,1)
     fadein = nil
 

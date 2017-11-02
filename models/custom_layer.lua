@@ -1,9 +1,6 @@
 -- network utilities.
 require 'torch'
 require 'nn'
---require 'cunn'
---require 'cudnn'
-
 
 -- Pixel-wise normalization layer.
 local PixelWiseNorm, parent = torch.class('nn.PixelWiseNorm', 'nn.Module')
@@ -45,7 +42,6 @@ function FadeInLayer:__init(resl_transition_tick)
     self.transition_tick = resl_transition_tick
     self.alpha = 0
     self.iter = 0
-    self.life = self.transition_tick
     self.complete = 0
     self.accum = 0              -- accumulated processed images.
 end
@@ -55,19 +51,13 @@ function FadeInLayer:updateOutput(input)
 
     local batchSize = input[1]:size(1)
     self.accum = self.accum + batchSize
-    if self.life > 0 then
-        if self.accum > 1000 then
-            self.life = self.life-1         -- decrease 1 tick.
-            self.accum = self.accum%1000
-        end
-    elseif self.life < 0 then
-        self.life = 0                        -- defense unforeseen exception.
-    end
 
     -- linear interpolation
-    self.alpha = self.life / (1.0*self.transition_tick)
+    self.alpha = (self.accum) / (self.transition_tick*1000.0)
+    self.alpha = math.max(0, math.min(1, self.alpha))
     -- multiply and add.
-    self.output = torch.add(input[1]:mul(self.alpha), input[2]:mul(1.0-self.alpha))
+    self.output = torch.add(input[1]:mul(1.0-self.alpha), input[2]:mul(self.alpha))
+    self.complete = (self.alpha)*100.0
     return self.output
 end
 function FadeInLayer:updateGradInput(input, gradOutput)
