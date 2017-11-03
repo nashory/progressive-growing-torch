@@ -197,6 +197,9 @@ function PGGAN:renew_loader()
 end
 
 local stacked = 0
+os.execute('mkdir -p log')
+logger = optim.Logger(string.format('log/%s.log', self.opt.name))
+logger:setNames{'epoch', 'ticks', 'ErrD', 'ErrG', 'Res', 'Trn', 'Elp'}
 function PGGAN:train(loader)
     -- get network weights.
     print(string.format('Dataset size :  %d', self.loader:size()))
@@ -212,7 +215,7 @@ function PGGAN:train(loader)
         -- calculate iteration.
         globalIter = globalIter + 1
         stacked = stacked + self.batchSize
-        if stacked%(math.ceil(self.loader:size()))==0 then 
+        if stacked > math.ceil(self.loader:size()) then 
             epoch = epoch + 1 
             stacked = stacked%math.ceil(self.loader:size())
         end
@@ -252,12 +255,19 @@ function PGGAN:train(loader)
             end
         end
 
-            
+        -- snapshot (save model)
+        if self.resl>9 and self.globalTick%self.opt.snapshot_every==0 then
+            local data = {dis = self.dis, gen = self.gen, optim = {dis = optimizer.dis.optimstate, gen = optimizer.gen.optimstate}}
+            self:snapshot(string.format('repo/%s', self.opt.name), self.opt.name, totalIter, data)
+        end
+
         -- logging
         local log_msg = string.format('[E:%d][T:%d][%6d/%6d]    errD(real): %.4f | errD(fake): %.4f | errG: %.4f    [Res:%4d][Trn:%.1f%%][Elp(hr):%.4f]',
                                         epoch, self.globalTick, stacked, self.loader:size(), 
                                         errD.real, errD.fake, errG, math.pow(2,math.floor(self.resl+1)), self.complete, tm:time().real/3600.0)
         print(log_msg)
+        logger:setNames{'epoch', 'ticks', 'ErrD', 'ErrG', 'Res', 'Trn', 'Elp'}
+        logger:add({epoch, self.globalTick, errD.real+errD.fake, errG, math.pow(2,math.floor(self.resl+1), self.complete, tm:time().real/3600.0)})
         
     end
     -- stop timer.
@@ -265,44 +275,23 @@ function PGGAN:train(loader)
 end
 
 
-
------------------------------------ Debugging functions --------------------------------------
-
-
-function PGGAN:__debug__output()
-    print(self.dis)
-    self.resl = self.resl + 1
-    self:test()
-    network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
-    print(self.dis)
-    self.resl = self.resl + 1
-    self:test() 
-    network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
-    print(self.dis)
-    self.resl = self.resl + 1
-    self:test() 
-    network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
-    print(self.dis)
-    self.resl = self.resl + 1
-    self:test() 
-    network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
-    print(self.dis)
-    self.resl = self.resl + 1
-    self:test() 
-    network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
-    print(self.dis)
-    self.resl = self.resl + 1
-    self:test() 
-    network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
-    print(self.dis)
-    self.resl = self.resl + 1
-    self:test() 
-    print('-----')
-    network.grow_network(self.gen, self.dis, self.resl, self.config.G, self.config.D, true)
-    print(self.dis)
-    self.resl = self.resl + 1
-    self:test() 
+function PGGAN:snapshot(path, fname, iter, data)
+    -- if dir not exist, create it.
+    if not paths.dirp(path) then    os.execute(string.format('mkdir -p %s', path)) end
+    
+    local fname = fname .. '_Iter' .. iter .. '.t7'
+    local iter_per_epoch = math.ceil(self.dataset:size()/self.batchSize)
+    if iter % math.ceil(self.opt.snapshot_every*iter_per_epoch) == 0 then
+        local save_path = path .. '/' .. fname
+        torch.save(save_path)
+        print('[Snapshot]: saved model @ ' .. save_path)
+    end
 end
+
+
+
+
+
 
 return PGGAN
 

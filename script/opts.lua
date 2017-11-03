@@ -15,16 +15,10 @@ function M.parse(arg)
 
 	-------------- Frequently Changed options -----------
 	cmd:option('-gpuid', 0, 'which gpu to use. -1 = use CPU')
-	cmd:option('-name', 'CelebA_dcgan', 'experiments numbering.')
-	cmd:option('-snapshot_every', 5, 'will save models every N epoch.')
-	cmd:option('-loadSize', 80, 'resize the loaded image to load size maintatining aspect ratio.')
-	cmd:option('-sampleSize', 64, 'size of random crops')
-    cmd:option('-gamma', 0.5, 'gamma factor of BEGAN')
-    cmd:option('-lambda', 0.001, 'lambda factor of BEGAN')
-
-
-
-	---------------- General options ---------------
+	cmd:option('-name', 'CelebA-HQ_1024', 'experiment name.')
+	cmd:option('-snapshot_every', 1000, 'will save model every N tick.')
+	
+    ---------------- General options ---------------
 	cmd:option('-seed', 0, 'random number generator seed to use (0 means random seed)')
 	cmd:option('-backend', 'cudnn', 'cudnn option.')
 
@@ -38,7 +32,7 @@ function M.parse(arg)
 	cmd:option('-display_server_ip', '10.64.81.227', 'host server ip address.')
 	cmd:option('-display_server_port', 9000, 'host server port.')
 	cmd:option('-save_jpg_iter', 6, 'save every X-th displayed image.')
-	cmd:option('-sever_name', 'dcgan-test', 'server name.')
+	cmd:option('-sever_name', 'progressive-growing-gan', 'server name.')
 
 
 	-------------- Training options---------------
@@ -54,7 +48,7 @@ function M.parse(arg)
     --------------- Progressive Growing options -------------
 	cmd:option('-transition_tick', 300, 'ticks for transition (1 tick = 1K iter)')
 	cmd:option('-training_tick', 300, 'ticks for training (1 tick = 1K iter)')
-	cmd:option('-total_tick', 100000, 'ticks for entire training (1 tick = 1K iter)')
+	cmd:option('-total_tick', 1000000, 'ticks for entire training (1 tick = 1K iter)')
 
 
 	cmd:text()
