@@ -214,7 +214,7 @@ function PGGAN:train(loader)
         stacked = stacked + self.batchSize
         if stacked%(math.ceil(self.loader:size()))==0 then 
             epoch = epoch + 1 
-            stacked = stacked%meth.ceil(self.loader:size())
+            stacked = stacked%math.ceil(self.loader:size())
         end
         
         self:ResolutionScheduler()
