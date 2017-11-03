@@ -55,7 +55,7 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
     -- discriminator
     -- make deep copy of first block and delete it.
     print(string.format('[From:%d, To:%d] Growing networks ... It might take few seconds... [Discriminator]',
-                                                                            math.pow(2,resl-1), math.pow(2,resl)))
+                                                                            math.pow(2,resl), math.pow(2,resl+1)))
     low_res_block = dis.modules[1]:clone()
     dis:remove(1)
     -- now, make residual block and add fade-in layer.

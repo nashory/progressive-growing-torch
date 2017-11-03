@@ -26,10 +26,10 @@ function MinibatchStatConcat:updateOutput(input)
     self.output = torch.cat(input, std, 2)             -- batch x (nfeature+1) x h x w
     return self.output
 end
-function MinibatchStatConcat:updateGradInput(input, gradOuptut)
+function MinibatchStatConcat:updateGradInput(input, gradOutput)
     self.gradInput = input:clone():fill(0)
     local nfeature = input:size(2)
-    self.gradInput:copy(gradOutput{{},{1, nfeature},{},{}})         -- batch x nfeature x h x w
+    self.gradInput:copy(gradOutput[{{},{1, nfeature},{},{}}])         -- batch x nfeature x h x w
     return self.gradInput
 end
 
@@ -67,8 +67,8 @@ function FadeInLayer:updateGradInput(input, gradOutput)
     self.gradInput[2] = input[2]:clone():fill(0)
 
     self.gradOutput = gradOutput
-    self.gradInput[1]:copy(self.gradOutput:clone():mul(self.alpha))
-    self.gradInput[2]:copy(self.gradOuptut:clone():mul(1.0-self.alpha))
+    self.gradInput[1]:copy(gradOutput:clone():mul(self.alpha))
+    self.gradInput[2]:copy(gradOutput:clone():mul(1.0-self.alpha))
 
     return self.gradInput
 end

@@ -63,7 +63,7 @@ function Discrim.output_block(d_config)
     if flag_bn then output_block:add(SBatchNorm(ndf)) end
     if flag_lrelu then output_block:add(nn.LeakyReLU(0.2,true)) else output_block:add(nn.ReLU(true)) end
     -- Linear
-    output_block:add(nn.View(-1, ndf))
+    output_block:add(nn.View(ndf))          -- batchsize x ndf
     output_block:add(nn.Linear(ndf, 1))
     output_block:add(nn.Sigmoid())
     return output_block, ndf

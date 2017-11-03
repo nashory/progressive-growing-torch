@@ -21,11 +21,15 @@ end
 
 
 function preprocessor.im_crop(im, imsize, crop_option)
-    assert(crop_option=='random' or crop_option=='center')
+    assert(crop_option=='random' or crop_option=='center' or crop_option=='none')
     assert(im:size(3)>=imsize or im:size(2)>=imsize, 'error. image size is smaller than crop size.')
     local iW = im:size(3)
     local iH = im:size(2)
     local out = nil
+    if crop_option == 'none' then
+        collectgarbage()
+        return im
+    end
     if crop_option == 'random' then
         local h1 = math.ceil(torch.uniform(1e-2, iH-imsize))
         local w1 = math.ceil(torch.uniform(1e-2, iW-imsize))

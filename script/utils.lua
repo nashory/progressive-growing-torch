@@ -8,6 +8,7 @@ function adjust_dyn_range(data, drange_in, drange_out)
         local scale = (drange_out[2]-drange_out[1])/(1.0*(drange_in[2]-drange_in[1]))
         local bias = drange_out[1] - drange_in[1]*scale
         data = data:mul(scale):add(bias)
+    end
     return data
 end
 function create_img_grid()

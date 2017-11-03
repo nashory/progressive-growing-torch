@@ -46,15 +46,15 @@ function M.parse(arg)
 	cmd:option('-noisetype', 'uniform', 'uniform/normal distribution noise.')
 
 	-- ndims of output features
-	cmd:option('-ngf', 64, 'output dimension of first conv layer of generator.')
-	cmd:option('-ndf', 64, 'output dimension of first conv layer of discriminator.')
+	cmd:option('-ngf', 512, 'output dimension of first conv layer of generator.')
+	cmd:option('-ndf', 512, 'output dimension of first conv layer of discriminator.')
 	cmd:option('-nc', 3, 'input image channel. (rgb:3, gray:1)')
 	cmd:option('-nz', 512, '# of dimension for input noise(z)')
 
     --------------- Progressive Growing options -------------
 	cmd:option('-transition_tick', 2, 'ticks for transition (1 tick = 1K iter)')
 	cmd:option('-training_tick', 2, 'ticks for training (1 tick = 1K iter)')
-	cmd:option('-total_tick', 10000, 'ticks for entire training (1 tick = 1K iter)')
+	cmd:option('-total_tick', 100000, 'ticks for entire training (1 tick = 1K iter)')
 
 
 	cmd:text()

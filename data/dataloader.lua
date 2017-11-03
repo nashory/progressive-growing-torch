@@ -51,7 +51,7 @@ function argchecker(param)
     assert(type(param.padding)=='boolean')
     assert(type(param.keep_ratio)=='boolean')
     assert(type(param.crop)=='string')
-    assert(param.crop=='center' or param.crop=='random')
+    assert(param.crop=='center' or param.crop=='random' or param.crop=='none')
     assert(type(param.pixel_range)=='string')
     assert(param.pixel_range=='[0,1]' or param.pixel_range=='[-1,1]')
     assert(type(param.rotate)=='number')
@@ -82,6 +82,8 @@ function dataloader:__init(...)
         error(string.format('Did not find directory: %s', self.trainPath))
     end
 
+    -- renew cache to reload loader parameters.
+    --os.execute('rm -rf cache')
     -- a cache file of the training metadata (if doesn't exist, will be created)
     local cache = "cache"
     local cache_prefix = self.trainPath:gsub('/', '_')
@@ -92,7 +94,9 @@ function dataloader:__init(...)
     if paths.filep(trainCache) then 
         print('Loading train metadata from cache')
         info = torch.load(trainCache)
-        for k,v in pairs(info) do self[k] = v end       -- restore variable.
+        for k,v in pairs(info) do 
+            if self[k]==nil then self[k] = v end       -- restore variable.
+        end
     else
         print('Creating train metadata')
         self:create_cache()
@@ -132,7 +136,7 @@ end
 function dataloader:trainHook(path)
     local src = self:load_im(path)
     local im = src:clone()
-
+    
     -- add padding if want.
     if self.padding then im = prepro.add_padding(im, self.loadSize) end
 

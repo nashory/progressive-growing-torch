@@ -33,12 +33,16 @@ end
 -- create dataloader.
 local myloader = require 'script.myloader'
 myloader.l_config.batchSize = 54
+myloader.l_config.loadSize = 16
+myloader.l_config.sampleSize = 16
 myloader:renew(myloader.l_config)
 local batch = myloader:getBatch('train')
 print(batch:size())
 
 
 myloader.l_config.batchSize = 27
+myloader.l_config.loadSize = 7
+myloader.l_config.sampleSize = 7
 myloader:renew(myloader.l_config)
 local batch = myloader:getBatch('train')
 print(batch:size())
@@ -157,7 +161,7 @@ local gan_criterion = {nn.MSECriterion()}
 require 'script.pggan'
 local optimstate = {}
 local gan_trainer = PGGAN(gan_models, gan_criterion, opt, optimstate, config)
-gan_trainer:train(10000, myloader)
+gan_trainer:train(myloader)
 
 
 print('Congrats! You just finished the training.')
