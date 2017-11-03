@@ -41,7 +41,7 @@ function PGGAN:__init(model, criterion, opt, optimstate, config)
     self.config = config
     self.resl = 2                   -- range from [2, 10] --> [4, 1024]
     self.kimgs = 0                  -- accumulated total number of images forwarded.
-    self.batch_table = { [4]=64, [8]=64, [16]=32, [32]=32, [64]=16, [128]=16, [256]=12, [512]=4, [1024]=1 }         -- slightly different from the paper.
+    self.batch_table = { [4]=32, [8]=32, [16]=32, [32]=16, [64]=16, [128]=16, [256]=12, [512]=4, [1024]=1 }         -- slightly different from the paper.
     self.batchSize = self.batch_table[math.pow(2, self.resl+1)]
     self.transition_tick = opt.transition_tick
     self.training_tick = opt.training_tick
@@ -234,7 +234,7 @@ function PGGAN:train(loader)
             local im_fake = self.gen:forward(self.test_noise:cuda()):clone()
             local im_fake_hq = size_resample(im_fake[{{1},{},{},{}}]:squeeze(), 1024)                -- hightest resolution we are targeting.
             local im_real_hq = size_resample(self.x[{{1},{},{},{}}]:squeeze(), 1024)                -- hightest resolution we are targeting.
-            local grid = create_img_grid(im_fake:clone(), 128, 8)           -- 8x8 grid.
+            local grid = create_img_grid(im_fake:clone(), 128, 4)           -- 4x4 grid.
 
                 
             self.disp.image(grid, {win=self.opt.display_id*1 + self.opt.gpuid, title=self.opt.server_name})

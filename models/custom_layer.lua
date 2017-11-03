@@ -10,8 +10,12 @@ function PixelWiseNorm:__init()
 end
 function PixelWiseNorm:updateOutput(input)
     local ndim = input:size(2)          -- batch x ndim x height x width
-    self.output = input:div(torch.sqrt(input:pow(2):sum():div(ndim):add(self.elipson)))
+    self.output = input:div(torch.sqrt(input:pow(2):sum()/ndim + self.elipson))
     return self.output
+end
+function PixelWiseNorm:updateGradInput(input, gradOutput)
+    self.gradInput = gradOutput
+    return self.gradInput
 end
 
 
@@ -102,29 +106,5 @@ function nn.LayerNorm(nOutput, bias, eps, affine)
 end
 
 
-
-
--- Resolution selector for fading in new layers during progressinve growing.
-local LODSelectLayer, parent = torch.class('nn.LODSelectLayer', 'nn.Module')
-function LODSelectLayer:__init()
-    print('dd')
-end
-function LODSelectLayer:updateOutput(input)
-    print('dd')
-end
-
-
-
-
-function nn.WScale()
-    print('equalized learning rate for preceding layer.')
-end
-
-
-
-
-function nn.GeneralizedDropOut()
-    print('generalized dropout layer.')
-end
 
 
