@@ -55,7 +55,7 @@ results so far (just started training. I will keep updating the result.)
 ~~~
 + E: epoch / T: ticks / errD,errG: loss
 + Res: current resolution of output
-+ Trn: transition progress (if 100%, in training process. if less than 100%, in transition by fade-in layer.)
++ Trn: transition progress (if 0%, in training phase. if more than 0%, in transition phase using fade-in layer.)
 + Elp(hr): Elapsed Time (Hour)
 
 
