@@ -36,10 +36,7 @@ function PGGAN:__init(model, criterion, opt, optimstate, config)
     self.noisetype = opt.noisetype
     self.nc = opt.nc
     self.nz = opt.nz
-
-    l = image.lena()
-    print(l:size())
-
+    
     -- initial variables.
     self.config = config
     self.resl = 2                   -- range from [2, 10] --> [4, 1024]
@@ -180,8 +177,6 @@ end
 function PGGAN:renew_parameters()
     self.gen:training()
     self.dis:training()
-    --self.param_gen = nil
-    --self.param_dis = nil
     optimizer.gen.optimstate = {}
     optimizer.dis.optimstate = {}
     self.param_gen, self.gradParam_gen = self.gen:getParameters()
@@ -197,10 +192,12 @@ function PGGAN:renew_loader()
 end
 
 local stacked = 0
-os.execute('mkdir -p log')
-logger = optim.Logger(string.format('log/%s.log', self.opt.name))
-logger:setNames{'epoch', 'ticks', 'ErrD', 'ErrG', 'Res', 'Trn', 'Elp'}
 function PGGAN:train(loader)
+    -- init logger
+    os.execute('mkdir -p log')
+    logger = optim.Logger(string.format('log/%s.log', self.opt.name))
+    logger:setNames{'epoch', 'ticks', 'ErrD', 'ErrG', 'Res', 'Trn', 'Elp'}
+    
     -- get network weights.
     print(string.format('Dataset size :  %d', self.loader:size()))
     

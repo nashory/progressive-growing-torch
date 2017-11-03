@@ -66,9 +66,8 @@ function FadeInLayer:updateGradInput(input, gradOutput)
     self.gradInput[1] = input[1]:clone():fill(0)
     self.gradInput[2] = input[2]:clone():fill(0)
 
-    self.gradOutput = gradOutput
-    self.gradInput[1]:copy(gradOutput:clone():mul(self.alpha))
-    self.gradInput[2]:copy(gradOutput:clone():mul(1.0-self.alpha))
+    self.gradInput[1]:copy(gradOutput:clone():mul(1.0-self.alpha))
+    self.gradInput[2]:copy(gradOutput:clone():mul(self.alpha))
 
     return self.gradInput
 end
