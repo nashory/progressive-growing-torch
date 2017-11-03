@@ -20,6 +20,19 @@ The quality of the generated image was good enough for training and verifying th
 If the CelebA-HQ dataset is releasted in then near future, I will update the experimental result.  
 [[download]](https://drive.google.com/open?id=0B4qLcYyJmiz0MUVMVFEyclJnRmc)
 
+~~~
+---------------------------------------------
+The training data folder should look like : 
+<train_data_root>
+                |--classA
+                        |--image1A
+                        |--image2A ...
+                |--classB
+                        |--image1B
+                        |--image2B ...
+---------------------------------------------
+~~~
+
 __[step 2.] Run training__   
   + edit script/opts.lua to change training parameter. (don't forget to change path to training images)
   + run and enjoy!  (Multi-threaded dataloading is supported.)  
