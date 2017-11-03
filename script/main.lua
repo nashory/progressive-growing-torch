@@ -28,44 +28,6 @@ if opt.gpuid >= 0 then
 end
 
 
-
---[[
--- create dataloader.
-local myloader = require 'script.myloader'
-myloader.l_config.batchSize = 54
-myloader.l_config.loadSize = 16
-myloader.l_config.sampleSize = 16
-myloader:renew(myloader.l_config)
-local batch = myloader:getBatch('train')
-print(batch:size())
-
-
-myloader.l_config.batchSize = 27
-myloader.l_config.loadSize = 7
-myloader.l_config.sampleSize = 7
-myloader:renew(myloader.l_config)
-local batch = myloader:getBatch('train')
-print(batch:size())
-]]--
-
---local loader = paths.dofile('../data/data.lua')
---local dataset = loader.new(8, opt)
---local batch  = dataset:getBatch(45)
---print(batch:size())
-
---opt.batchSize = 24
---local dataset = loader.new(8, opt)
---local batch  = dataset:getBatch(45)
---print(batch:size())
-
-
-
-
--- create dataloader.
---local myloader = require 'script.myloader'
-
-
-
 -- generator / discriminator parameter setting.
 g_config = {
             ['num_channels']=3,
@@ -110,52 +72,16 @@ config = {
 local gan_models = {}
 local gan_gen = network.get_init_gen(g_config)
 local gan_dis = network.get_init_dis(d_config)
---print ('Generator structure: ')    
---print(gan_gen)
---print ('Discriminator structure: ')    
---print(gan_dis)
-
+print ('Generator structure: ')    
+print(gan_gen)
+print ('Discriminator structure: ')    
+print(gan_dis)
 
 gan_models = {gan_gen, gan_dis}
 
 
---[[
-for i = 3, 4 do
-    print('----------------')
-    network.grow_network(gan_gen, gan_dis, i, g_config, d_config)
-    --print(gan_dis)
-end
-]]--
-
-
---print(gan_gen.modules[2])
---local gan_dis = dis.create_model(opt.sampleSize, d_config)         -- discriminator
---local gan_gen = gen.create_model(g_config)         -- generator    
---gan_models = {gan_gen, gan_dis}
---print ('Generator structure: ')    
---print(gan_gen)
-
--- remove last layer.
---gan_gen:remove()
---print ('Generator structure after removal: ')    
---print(gan_gen)
-
-
-
-
---conv_nodes = gan_gen:findModules('nn.SpatialFullConvolution')
---for i = 1, #conv_nodes do
---    print(conv_nodes[i].__typename)
---end
-
-
---print ('Discriminator structure: ')
---print(gan_dis)
-
 -- loss metrics
 local gan_criterion = {nn.MSECriterion()}
-
-
 
 -- run trainer
 require 'script.pggan'

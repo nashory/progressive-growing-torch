@@ -14,7 +14,7 @@ function M.parse(arg)
 
 
 	-------------- Frequently Changed options -----------
-	cmd:option('-gpuid', -1, 'which gpu to use. -1 = use CPU')
+	cmd:option('-gpuid', 0, 'which gpu to use. -1 = use CPU')
 	cmd:option('-name', 'CelebA_dcgan', 'experiments numbering.')
 	cmd:option('-snapshot_every', 5, 'will save models every N epoch.')
 	cmd:option('-loadSize', 80, 'resize the loaded image to load size maintatining aspect ratio.')
@@ -36,12 +36,12 @@ function M.parse(arg)
 	cmd:option('-display_id', 10, 'display window id.')
 	cmd:option('-display_iter', 5, '# of iterations after which display is updated.')
 	cmd:option('-display_server_ip', '10.64.81.227', 'host server ip address.')
-	cmd:option('-display_server_port', 8000, 'host server port.')
+	cmd:option('-display_server_port', 9000, 'host server port.')
+	cmd:option('-save_jpg_iter', 6, 'save every X-th displayed image.')
 	cmd:option('-sever_name', 'dcgan-test', 'server name.')
 
 
 	-------------- Training options---------------
-	cmd:option('-batchSize', 16, 'batch size for training')
 	cmd:option('-lr', 0.0002, 'learning rate')
 	cmd:option('-noisetype', 'uniform', 'uniform/normal distribution noise.')
 
@@ -52,8 +52,8 @@ function M.parse(arg)
 	cmd:option('-nz', 512, '# of dimension for input noise(z)')
 
     --------------- Progressive Growing options -------------
-	cmd:option('-transition_tick', 2, 'ticks for transition (1 tick = 1K iter)')
-	cmd:option('-training_tick', 2, 'ticks for training (1 tick = 1K iter)')
+	cmd:option('-transition_tick', 300, 'ticks for transition (1 tick = 1K iter)')
+	cmd:option('-training_tick', 300, 'ticks for training (1 tick = 1K iter)')
 	cmd:option('-total_tick', 100000, 'ticks for entire training (1 tick = 1K iter)')
 
 

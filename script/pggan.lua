@@ -37,6 +37,8 @@ function PGGAN:__init(model, criterion, opt, optimstate, config)
     self.nc = opt.nc
     self.nz = opt.nz
 
+    l = image.lena()
+    print(l:size())
 
     -- initial variables.
     self.config = config
@@ -56,7 +58,7 @@ function PGGAN:__init(model, criterion, opt, optimstate, config)
 
     
     -- generate test_noise(fixed)
-    self.test_noise = torch.Tensor(64, self.nz, 1, 1)
+    self.test_noise = torch.Tensor(self.batchSize, self.nz, 1, 1)
     if self.noisetype == 'uniform' then self.test_noise:uniform(-1,1)
     elseif self.noisetype == 'normal' then self.test_noise:normal(0,1) end
     
@@ -99,10 +101,15 @@ function PGGAN:ResolutionScheduler()
         if math.floor(self.resl) ~= prev_resl then
             self.flag_flush = true
             self.batchSize = self.batch_table[math.pow(2, math.floor(self.resl+1))]
+           
+            --print('-----before ------')
+            --print(self.gen.modules[1]:getParameters():sum())
             network.grow_network(self.gen, self.dis, math.floor(self.resl),
                                  self.config.G, self.config.D, true)
             self:renew_loader()
             self:renew_parameters()
+            --print('-----after ------')
+            --print(self.gen.modules[1]:getParameters():sum())
         end
     end
 
@@ -173,8 +180,8 @@ end
 function PGGAN:renew_parameters()
     self.gen:training()
     self.dis:training()
-    self.param_gen = nil
-    self.param_dis = nil
+    --self.param_gen = nil
+    --self.param_dis = nil
     optimizer.gen.optimstate = {}
     optimizer.dis.optimstate = {}
     self.param_gen, self.gradParam_gen = self.gen:getParameters()
@@ -223,8 +230,27 @@ function PGGAN:train(loader)
                              optimizer.gen.config.elipson, optimizer.gen.optimstate)
 
         -- display
-        -- 
+        if (globalIter%self.opt.display_iter==0) and (self.opt.display) then
+            local im_fake = self.gen:forward(self.test_noise:cuda()):clone()
+            local im_fake_hq = size_resample(im_fake[{{1},{},{},{}}]:squeeze(), 1024)                -- hightest resolution we are targeting.
+            local im_real_hq = size_resample(self.x[{{1},{},{},{}}]:squeeze(), 1024)                -- hightest resolution we are targeting.
+            local grid = create_img_grid(im_fake:clone(), 128, 8)           -- 8x8 grid.
 
+                
+            self.disp.image(grid, {win=self.opt.display_id*1 + self.opt.gpuid, title=self.opt.server_name})
+            self.disp.image(im_fake_hq, {win=self.opt.display_id*2 + self.opt.gpuid, title=self.opt.server_name})
+            self.disp.image(im_real_hq, {win=self.opt.display_id*4 + self.opt.gpuid, title=self.opt.server_name})
+           
+            if (globalIter%(self.opt.display_iter*self.opt.save_jpg_iter)==0) then
+                -- save image as jpg grid.
+                os.execute(string.format('mkdir -p save/grid'))   
+                --local grid = create_img_grid(im_fake:clone(), 128, 8)           -- 8x8 grid.
+                image.save(string.format('save/grid/%d.jpg', math.floor(globalIter/self.opt.display_iter)), grid)
+                -- save generated HQ fake image.            
+                os.execute(string.format('mkdir -p save/resl_%d', math.floor(self.resl+1)))
+                image.save(string.format('save/resl_%d/%d.jpg', math.floor(self.resl+1), math.floor(globalIter/self.opt.display_iter)), im_fake_hq:add(1):div(2))
+            end
+        end
 
             
         -- logging

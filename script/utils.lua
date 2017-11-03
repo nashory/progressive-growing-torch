@@ -1,5 +1,6 @@
 -- tools for convenience.
 require 'optim'
+require 'image'
 
 
 -- Image utils.
@@ -11,24 +12,40 @@ function adjust_dyn_range(data, drange_in, drange_out)
     end
     return data
 end
-function create_img_grid()
-    print('gg')
+
+function create_img_grid(input, unitSize, len)
+    -- input: Tensor(batch x channel x height x width)
+    -- gridsize: 3 x (len x unitSize) x (len x unitSize)
+    local len = len or math.floor(math.sqrt(input:size(1)))
+    local batch = math.pow(len, 2)
+    local unitSize = unitSize or 64
+    
+    -- convert from [-1,1] to [0,1] pixel range.
+    input:add(1):div(2)
+
+    -- draw grid.
+    local grid = torch.Tensor(3, len*unitSize, len*unitSize):zero()
+    local cnt = 1
+    for h=1, len*unitSize, unitSize do
+        for w=1, len*unitSize, unitSize do
+            if cnt <= input:size(1) then
+                grid[{{},{h, h+unitSize-1},{w,w+unitSize-1}}]:copy(size_resample(input[{{cnt},{},{},{}}]:squeeze(), unitSize))
+            else 
+                grid[{{},{h, h+unitSize-1},{w,w+unitSize-1}}]:fill(1)
+            end
+            cnt = cnt + 1
+        end
+    end
+    return grid
 end
 
+function size_resample(im, targSize)
+    return image.scale(im:float():clone(), targSize, targSize, 'simple')
+end
 
--- Training utils.
-function ramp_up()
-    print('gg')
-end
-function rampdown_linear()
-    print('gg')
-end
-function format_time()
-    print('gg')
-end
 
 -- Logger.
-logger = {}
+local logger = {}
 function logger.init(self, filename, data_field)
     require 'optim'
     self.loggerPath = filename
@@ -41,5 +58,4 @@ end
 function logger.flush(self)
     os.execute(string.format('cat /dev/null > %s', self.loggerPath))
 end
-
 
