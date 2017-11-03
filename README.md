@@ -1,15 +1,9 @@
-# progressive-growing-torch
-__YOUR CONTRIBUTION IS INVALUABLE FOR THIS PROJECT :)__   
+# Progressive Growing of GANs for Improved Quality, Stability, and Variation
+  
 Torch implementation of [PROGRESSIVE GROWING OF GANS FOR IMPROVED QUALITY, STABILITY, AND VARIATION](http://research.nvidia.com/sites/default/files/pubs/2017-10_Progressive-Growing-of//karras2017gan-paper.pdf)
+__YOUR CONTRIBUTION IS INVALUABLE FOR THIS PROJECT :)__ 
 
 ![image](https://puu.sh/ydG0E/e0f32b0d92.png)
-
-
-## To-Do List
-- [X] Equalized learning rate (weight normalization)
-- [X] Pixel-wise norm
-- [X] Support WGAN-GP loss
-- [X] Support logger
 
 
 ## Prerequisites
@@ -22,12 +16,13 @@ Torch implementation of [PROGRESSIVE GROWING OF GANS FOR IMPROVED QUALITY, STABI
 
 __[step 1.] Preapre dataset__   
 CelebA-HQ dataset is not available yet, so I used 100,000 generated PNGs of CelebA-HQ released by the author.   
-The quality of the generated image was extremely good enough for training and verifying the preformance of the code. If the CelebA-HQ dataset is releasted in then near future, I will update the experimental result.  
+The quality of the generated image was good enough for training and verifying the preformance of the code.  
+If the CelebA-HQ dataset is releasted in then near future, I will update the experimental result.  
 [[download]](https://drive.google.com/open?id=0B4qLcYyJmiz0MUVMVFEyclJnRmc)
 
 __[step 2.] Run training__   
   + edit script/opts.lua to change training parameter. (don't forget to change path to training images)
-  + run and enjoy!  (Multi-threaded dataloading is supported.)
+  + run and enjoy!  (Multi-threaded dataloading is supported.)  
   `$ python run.py`
 
 __[step 3.] Visualization__  
@@ -50,6 +45,12 @@ results so far (just started training. I will keep updating the result.)
 + Trn: transition progress (if 100%, in training process. if less than 100%, in transition by fade-in layer.)
 + Elp(hr): Elapsed Time (Hour)
 
+
+
+## To-Do List (will be implemented soon)
+- [X] Equalized learning rate (weight normalization)
+- [X] Pixel-wise norm
+- [X] Support WGAN-GP loss
 
 ## Compatability
 + cuda v8.0
