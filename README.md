@@ -49,7 +49,6 @@ results so far (just started training. I will keep updating the result.)
 
 ## To-Do List (will be implemented soon)
 - [X] Equalized learning rate (weight normalization)
-- [X] Pixel-wise norm
 - [X] Support WGAN-GP loss
 
 ## Compatability

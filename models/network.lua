@@ -76,8 +76,8 @@ function network.flush_FadeInBlock(gen, dis, resl)
     -- remove from generator and discriminator.
     -- replace fade-in block with intermediate block.
     -- need to copy weights befroe the removal.
-    if resl>=3 and resl<=9 then 
-        local high_resl_block = gen.modules[resl-1].modules[1].modules[2]:clone()
+    if resl>3 and resl<=10 then 
+        local high_resl_block = gen.modules[resl-2].modules[1].modules[2]:clone()
         gen:remove()
         gen:add(high_resl_block.modules[1])
         gen:add(high_resl_block.modules[2])

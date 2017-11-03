@@ -45,9 +45,9 @@ function PGGAN:__init(model, criterion, opt, optimstate, config)
     self.batchSize = self.batch_table[math.pow(2, self.resl+1)]
     self.transition_tick = opt.transition_tick
     self.training_tick = opt.training_tick
-    self.flag_flush = true
-    self.complete = 100.0
+    self.complete = 0.0
     self.globalTick = 0
+    self.fadein = nil
 
     -- init dataloader.
     self.loader = require 'script.myloader'
@@ -86,34 +86,26 @@ function PGGAN:ResolutionScheduler()
         -- clamping, range: 4 ~ 1024
         self.resl = math.max(2, math.min(9, self.resl))
 
-        -- remove fade-in block
-        if self.resl%1.0 > (1.0*self.transition_tick)/(self.transition_tick+self.training_tick) then
-            if self.flag_flush then
-                network.flush_FadeInBlock(self.gen, self.dis, math.floor(self.resl))
-                self.flag_flush = false
-                self:renew_parameters()
-            end
-        end
+    
         -- grow network
         if math.floor(self.resl) ~= prev_resl then
             self.flag_flush = true
             self.batchSize = self.batch_table[math.pow(2, math.floor(self.resl+1))]
            
-            --print('-----before ------')
-            --print(self.gen.modules[1]:getParameters():sum())
+            -- remove previous fade-in layer and grow.
+            network.flush_FadeInBlock(self.gen, self.dis, math.floor(self.resl))
             network.grow_network(self.gen, self.dis, math.floor(self.resl),
                                  self.config.G, self.config.D, true)
             self:renew_loader()
             self:renew_parameters()
-            --print('-----after ------')
-            --print(self.gen.modules[1]:getParameters():sum())
+            -- find fadein layer.  
+            fadein_nodes = self.gen:findModules('nn.FadeInLayer')
+            if #fadein_nodes~=0 then self.fadein = fadein_nodes[1] end
         end
     end
-
-    fadein_nodes = self.gen:findModules('nn.FadeInLayer')
-    if #fadein_nodes~=0 then
-        fadein_nodes[1]:updateAlpha(self.batchSize)
-        self.complete = fadein_nodes[1].complete
+    if self.fadein ~= nil and self.resl%1.0 >= (1.0*self.training_tick)/(self.transition_tick+self.training_tick) then
+        self.fadein:updateAlpha(self.batchSize) 
+        self.complete = self.fadein.complete
     end
 end
 

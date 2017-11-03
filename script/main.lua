@@ -54,7 +54,6 @@ d_config = {
             ['fmap_max']=512,
             ['use_wscale']=true,
             ['fmap_gdrop']=true,
-            ['fmap_layernorm']=false,
             ['normalize_latents']=true,
             ['use_wscale']=true,
             ['use_pixelwise']=true,
