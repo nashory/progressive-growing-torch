@@ -57,7 +57,7 @@ d_config = {
             ['normalize_latents']=true,
             ['use_wscale']=true,
             ['use_pixelwise']=true,
-            ['use_leakyrelu']=true,
+            ['use_leakyrelu']=false,
             ['use_batchnorm']=false,
             ['use_tanh']=true,
 }
