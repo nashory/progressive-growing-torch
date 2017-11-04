@@ -104,8 +104,8 @@ function Discrim.intermediate_block(resl, d_config)
 end
     
 function Discrim.from_rgb_block(ndim, d_config)
-    local flag_lrelu = d_config['use_leakyrelu']
     local nc = d_config['num_channels']
+    local flag_lrelu = d_config['use_leakyrelu']
     
     -- set input block.
     local from_rgb_block = nn.Sequential()
