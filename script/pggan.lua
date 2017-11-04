@@ -42,12 +42,13 @@ function PGGAN:__init(model, criterion, opt, optimstate, config)
     self.resl = 2                   -- range from [2, 10] --> [4, 1024]
     self.kimgs = 0                  -- accumulated total number of images forwarded.
     self.batch_table = { [4]=32, [8]=32, [16]=32, [32]=16, [64]=16, [128]=16, [256]=12, [512]=4, [1024]=1 }         -- slightly different from the paper.
-    self.batchSize = self.batch_table[math.pow(2, self.resl+1)]
+    self.batchSize = self.batch_table[math.pow(2, self.resl)]
     self.transition_tick = opt.transition_tick
     self.training_tick = opt.training_tick
     self.complete = 0.0
     self.globalTick = 0
     self.fadein = nil
+    self.flag_flush = true
 
     -- init dataloader.
     self.loader = require 'script.myloader'
@@ -75,7 +76,7 @@ end
 -- should be called every iteration to ensure kimgs is counted properly.
 function PGGAN:ResolutionScheduler()
 
-    self.batchSize = self.batch_table[math.pow(2,math.floor(self.resl+1))]
+    self.batchSize = self.batch_table[math.pow(2,math.floor(self.resl))]
     local prev_kimgs = self.kimgs
     self.kimgs = self.kimgs + self.batchSize
     if (self.kimgs%TICK) < (prev_kimgs%TICK) then
@@ -84,23 +85,35 @@ function PGGAN:ResolutionScheduler()
         local prev_resl = math.floor(self.resl)
         self.resl = self.resl + 1.0/(self.transition_tick + self.training_tick)
         -- clamping, range: 4 ~ 1024
-        self.resl = math.max(2, math.min(9, self.resl))
+        self.resl = math.max(2, math.min(10.5, self.resl))
 
     
         -- grow network
         if math.floor(self.resl) ~= prev_resl then
-            self.flag_flush = true
-            self.batchSize = self.batch_table[math.pow(2, math.floor(self.resl+1))]
+            self.batchSize = self.batch_table[math.pow(2, math.floor(self.resl))]
            
             -- remove previous fade-in layer and grow.
             network.flush_FadeInBlock(self.gen, self.dis, math.floor(self.resl))
+            print(string.format('--------------------------resl:%d, flush-------------------------', math.floor(self.resl)))
+            print(self.gen)
+            print(self.dis)
             network.grow_network(self.gen, self.dis, math.floor(self.resl),
                                  self.config.G, self.config.D, true)
+            print(string.format('--------------------------resl:%d, grow-------------------------', math.floor(self.resl)))
+            print(self.gen)
+            print(self.dis)
             self:renew_loader()
             self:renew_parameters()
             -- find fadein layer.  
             fadein_nodes = self.gen:findModules('nn.FadeInLayer')
             if #fadein_nodes~=0 then self.fadein = fadein_nodes[1] end
+        end
+        if math.ceil(self.resl)>=11 and self.flag_flush then
+            flag_flush = false
+            network.flush_FadeInBlock(self.gen, self.dis, math.floor(self.resl))
+            print(string.format('--------------------------resl:%d, flush-------------------------', math.floor(self.resl)))
+            print(self.gen)
+            print(self.dis)
         end
     end
     if self.fadein ~= nil and self.resl%1.0 >= (1.0*self.training_tick)/(self.transition_tick+self.training_tick) then
@@ -126,8 +139,8 @@ PGGAN['fDx'] = function(self, x)
     self.dis:zeroGradParameters()
 
     -- generate noise(z)
-    self.noise = torch.Tensor(self.batch_table[math.pow(2, math.floor(self.resl+1))], self.nz, 1, 1):zero()
-    self.label = torch.Tensor(self.batch_table[math.pow(2, math.floor(self.resl+1))], 1):zero()
+    self.noise = torch.Tensor(self.batch_table[math.pow(2, math.floor(self.resl))], self.nz, 1, 1):zero()
+    self.label = torch.Tensor(self.batch_table[math.pow(2, math.floor(self.resl))], 1):zero()
     if self.noisetype == 'uniform' then self.noise:uniform(-1,1)
     elseif self.noisetype == 'normal' then self.noise:normal(0,1) end
     
@@ -177,14 +190,19 @@ end
 
 function PGGAN:renew_loader()
     self.loader.l_config.batchSize = self.batchSize
-    self.loader.l_config.loadSize = math.pow(2, math.floor(self.resl+1))
-    self.loader.l_config.sampleSize = math.pow(2, math.floor(self.resl+1))
+    self.loader.l_config.loadSize = math.pow(2, math.floor(self.resl))
+    self.loader.l_config.sampleSize = math.pow(2, math.floor(self.resl))
     self.loader:renew(self.loader.l_config)
     
 end
 
 local stacked = 0
 function PGGAN:train(loader)
+    --print('ggg')
+    --print(self.gen.modules[#self.gen.modules])
+    --self:test()
+
+
     -- init logger
     os.execute('mkdir -p log')
     logger = optim.Logger(string.format('log/%s.log', self.opt.name))
@@ -210,6 +228,8 @@ function PGGAN:train(loader)
         end
         
         self:ResolutionScheduler()
+        
+        --[[
         local errD = self:fDx()
         local errG = self:fGx()
            
@@ -257,7 +277,9 @@ function PGGAN:train(loader)
         print(log_msg)
         logger:setNames{'epoch', 'ticks', 'ErrD', 'ErrG', 'Res', 'Trn', 'Elp'}
         logger:add({epoch, self.globalTick, errD.real+errD.fake, errG, math.pow(2,math.floor(self.resl+1), self.complete, tm:time().real/3600.0)})
-        
+    
+    ]]--
+
     end
     -- stop timer.
     tm:stop()
