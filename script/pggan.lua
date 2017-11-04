@@ -87,27 +87,33 @@ function PGGAN:ResolutionScheduler()
         -- clamping, range: 4 ~ 1024
         self.resl = math.max(2, math.min(10.5, self.resl))
 
-    
+        -- flush network.
+        if self.flag_flush and self.resl%1.0 >= (1.0*self.training_tick)/(self.transition_tick+self.training_tick) then
+            self.flag_flush = false
+            network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl))
+            
+        end
         -- grow network
         if math.floor(self.resl) ~= prev_resl then
+            self.flag_flush = true
             self.batchSize = self.batch_table[math.pow(2, math.floor(self.resl))]
-           
-            -- remove previous fade-in layer and grow.
-            network.flush_FadeInBlock(self.gen, self.dis, math.floor(self.resl))
             network.grow_network(self.gen, self.dis, math.floor(self.resl),
                                  self.config.G, self.config.D, true)
             self:renew_loader()
             self:renew_parameters()
             -- find fadein layer.  
             fadein_nodes = self.gen:findModules('nn.FadeInLayer')
-            if #fadein_nodes~=0 then self.fadein = fadein_nodes[1] end
+            if #fadein_nodes~=0 then 
+                self.fadein = fadein_nodes[1] 
+                self.complete = self.fadein.complete
+            end
         end
         if math.ceil(self.resl)>=11 and self.flag_flush then
             self.flag_flush = false
             network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl))
         end
     end
-    if self.fadein ~= nil and self.resl%1.0 >= (1.0*self.training_tick)/(self.transition_tick+self.training_tick) then
+    if self.fadein ~= nil and self.resl%1.0 <= (1.0*self.training_tick)/(self.transition_tick+self.training_tick) then
         self.fadein:updateAlpha(self.batchSize) 
         self.complete = self.fadein.complete
     end

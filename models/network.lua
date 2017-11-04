@@ -46,7 +46,7 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
     local to_rgb_block = G.to_rgb_block(ndim, g_config)
     local fadein = nn.Sequential()
     fadein:add( nn.ConcatTable()
-                :add(nn.Sequential():add(prev_block):add(nn.SpatialUpSamplingNearest(2.0)))  -- for low resl
+                :add(nn.Sequential():add(nn.SpatialUpSamplingNearest(2.0)):add(prev_block))      -- for low resl
                 :add(nn.Sequential():add(inter_block):add(to_rgb_block)))                       -- for high resl
     fadein:add(nn.FadeInLayer(transition_tick))
     gen:add(fadein)
@@ -63,7 +63,7 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
     local from_rgb_block = D.from_rgb_block(ndim, d_config)
     local fadein = nn.Sequential()
     fadein:add( nn.ConcatTable()
-                :add(nn.Sequential():add(prev_block):add(nn.SpatialAveragePooling(2,2,2,2)))
+                :add(nn.Sequential():add(nn.SpatialAveragePooling(2,2,2,2)):add(prev_block))
                 :add(nn.Sequential():add(from_rgb_block):add(inter_block)))
     fadein:add(nn.FadeInLayer(transition_tick))
     dis:insert(fadein,1)            -- insert modeul in front
@@ -76,8 +76,9 @@ function network.flush_FadeInBlock(gen, dis, resl)
     -- remove from generator and discriminator.
     -- replace fade-in block with intermediate block.
     -- need to copy weights befroe the removal.
+    print(string.format('[Res: %d] Flushing fade-in network ... It might take few seconds...', math.pow(2,resl)))
     if resl>3 and resl<=11 then
-        local high_resl_block = gen.modules[resl-2].modules[1].modules[2]:clone()
+        local high_resl_block = gen.modules[#gen.modules].modules[1].modules[2]:clone()
         gen:remove()
         gen:add(high_resl_block.modules[1])
         gen:add(high_resl_block.modules[2])
