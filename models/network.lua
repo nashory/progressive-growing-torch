@@ -72,20 +72,24 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
     return gen, dis
 end
 
-function network.flush_FadeInBlock(gen, dis, resl)
+function network.flush_FadeInBlock(gen, dis, resl, targ)
     -- remove from generator and discriminator.
     -- replace fade-in block with intermediate block.
     -- need to copy weights befroe the removal.
-    print(string.format('[Res: %d] Flushing fade-in network ... It might take few seconds...', math.pow(2,resl)))
+    assert(targ=='gen' or targ=='dis', 'targ argument should be: gen / dis')
+    print(string.format('[Res: %d] Flushing fade-in network[%s] ... It might take few seconds...', math.pow(2,resl-1), targ))
     if resl>3 and resl<=11 then
-        local high_resl_block = gen.modules[#gen.modules].modules[1].modules[2]:clone()
-        gen:remove()
-        gen:add(high_resl_block.modules[1])
-        gen:add(high_resl_block.modules[2])
-        local high_resl_block = dis.modules[1].modules[1].modules[2]:clone()
-        dis:remove(1)
-        dis:insert(high_resl_block.modules[2], 1)
-        dis:insert(high_resl_block.modules[1], 1)
+        if targ == 'gen' then
+            local high_resl_block = gen.modules[#gen.modules].modules[1].modules[2]:clone()
+            gen:remove()
+            gen:add(high_resl_block.modules[1]:clone())
+            gen:add(high_resl_block.modules[2]:clone())
+        elseif targ == 'dis' then
+            local high_resl_block = dis.modules[1].modules[1].modules[2]:clone()
+            dis:remove(1)
+            dis:insert(high_resl_block.modules[2]:clone(), 1)
+            dis:insert(high_resl_block.modules[1]:clone(), 1)
+        end
     end
     return gen, dis
 end

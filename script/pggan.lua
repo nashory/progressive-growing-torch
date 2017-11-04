@@ -45,10 +45,12 @@ function PGGAN:__init(model, criterion, opt, optimstate, config)
     self.batchSize = self.batch_table[math.pow(2, self.resl)]
     self.transition_tick = opt.transition_tick
     self.training_tick = opt.training_tick
-    self.complete = 0.0
     self.globalTick = 0
-    self.fadein = nil
-    self.flag_flush = true
+    self.fadein = {}
+    self.complete= {['gen']=0.0, ['dis']=0.0}
+    self.flag_flush_gen = true
+    self.flag_flush_dis = true
+
 
     -- init dataloader.
     self.loader = require 'script.myloader'
@@ -74,8 +76,14 @@ end
 
 -- this function will schedule image resolution factor(resl) progressively.
 -- should be called every iteration to ensure kimgs is counted properly.
+-- step 1. (transition_tick) --> transition in generator.
+-- step 2. (training_tick) --> train and stabilize.
+-- step 3. (transition_tick) --> transition in discriminator.
+-- step 4. (training_tick) --> train and stabilize.
+-- total period: (2*training_tick + 2*transition_tick)
 function PGGAN:ResolutionScheduler()
 
+    local delta = 1.0/(2*self.training_tick + 2*self.transition_tick)
     self.batchSize = self.batch_table[math.pow(2,math.floor(self.resl))]
     local prev_kimgs = self.kimgs
     self.kimgs = self.kimgs + self.batchSize
@@ -83,39 +91,50 @@ function PGGAN:ResolutionScheduler()
         self.globalTick = self.globalTick + 1
         -- increase linearly every tick, and grow network structure.
         local prev_resl = math.floor(self.resl)
-        self.resl = self.resl + 1.0/(self.transition_tick + self.training_tick)
+        self.resl = self.resl + delta
         -- clamping, range: 4 ~ 1024
         self.resl = math.max(2, math.min(10.5, self.resl))
 
         -- flush network.
-        if self.flag_flush and self.resl%1.0 >= (1.0*self.training_tick)/(self.transition_tick+self.training_tick) then
-            self.flag_flush = false
-            network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl))
-            
+        if self.flag_flush_gen and self.resl%1.0 >= (self.transition_tick)*delta then
+            self.flag_flush_gen = false
+            network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl), 'gen')
+            self.fadein.gen = nil
+        elseif self.flag_flush_dis and self.resl%1.0 >= (self.training_tick+self.transition_tick*2)*delta then
+            self.flag_flush_dis = false
+            network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl), 'dis') 
+            self.fadein.dis = nil
         end
         -- grow network
         if math.floor(self.resl) ~= prev_resl then
-            self.flag_flush = true
+            self.flag_flush_gen = true
+            self.flag_flush_dis = true
             self.batchSize = self.batch_table[math.pow(2, math.floor(self.resl))]
             network.grow_network(self.gen, self.dis, math.floor(self.resl),
                                  self.config.G, self.config.D, true)
             self:renew_loader()
             self:renew_parameters()
             -- find fadein layer.  
-            fadein_nodes = self.gen:findModules('nn.FadeInLayer')
-            if #fadein_nodes~=0 then 
-                self.fadein = fadein_nodes[1] 
-                self.complete = self.fadein.complete
-            end
+            local fadein_nodes = self.gen:findModules('nn.FadeInLayer')
+            if #fadein_nodes~=0 then self.fadein.gen = fadein_nodes[1] end
+            self.complete.gen = self.fadein.gen.complete
+            local fadein_nodes = self.dis:findModules('nn.FadeInLayer')
+            if #fadein_nodes~=0 then self.fadein.dis = fadein_nodes[1] end
+            self.complete.dis = self.fadein.dis.complete
         end
         if math.ceil(self.resl)>=11 and self.flag_flush then
-            self.flag_flush = false
+            self.flag_flush_gen = false
+            self.flag_flush_dis = false
             network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl))
         end
     end
-    if self.fadein ~= nil and self.resl%1.0 <= (1.0*self.training_tick)/(self.transition_tick+self.training_tick) then
-        self.fadein:updateAlpha(self.batchSize) 
-        self.complete = self.fadein.complete
+    if self.fadein.gen ~= nil and self.resl%1.0 <= (self.transition_tick)*delta then
+        self.fadein.gen:updateAlpha(self.batchSize)
+        self.complete.gen = self.fadein.gen.complete
+    end
+    if  self.fadein.dis ~= nil and self.resl%1.0 >= (self.training_tick+self.transition_tick)*delta and self.resl%1.0 < (self.training_tick+self.transition_tick*2) then
+        self.fadein.dis:updateAlpha(self.batchSize)
+        self.complete.dis = self.fadein.dis.complete
     end
 end
 
@@ -189,7 +208,7 @@ function PGGAN:train(loader)
     -- init logger
     os.execute('mkdir -p log')
     logger = optim.Logger(string.format('log/%s.log', self.opt.name))
-    logger:setNames{'epoch', 'ticks', 'ErrD', 'ErrG', 'Res', 'Trn', 'Elp'}
+    logger:setNames{'epoch', 'ticks', 'ErrD', 'ErrG', 'Res', 'Trn(G)', 'Trn(D)', 'Elp'}
     
     -- get network weights.
     print(string.format('Dataset size :  %d', self.loader:size()))
@@ -253,12 +272,12 @@ function PGGAN:train(loader)
         end
 
         -- logging
-        local log_msg = string.format('[E:%d][T:%d][%6d/%6d]    errD(real): %.4f | errD(fake): %.4f | errG: %.4f    [Res:%4d][Trn:%.1f%%][Elp(hr):%.4f]',
+        local log_msg = string.format('[E:%d][T:%d][%6d/%6d]    errD(real): %.4f | errD(fake): %.4f | errG: %.4f    [Res:%4d][Trn(G):%.1f%%][Trn(D):%.1f%%][Elp(hr):%.4f]',
                                         epoch, self.globalTick, stacked, self.loader:size(), 
-                                        errD.real, errD.fake, errG, math.pow(2,math.floor(self.resl)), self.complete, tm:time().real/3600.0)
+                                        errD.real, errD.fake, errG, math.pow(2,math.floor(self.resl)), self.complete.gen, self.complete.dis, tm:time().real/3600.0)
         print(log_msg)
-        logger:setNames{'epoch', 'ticks', 'ErrD', 'ErrG', 'Res', 'Trn', 'Elp'}
-        logger:add({epoch, self.globalTick, errD.real+errD.fake, errG, math.pow(2,math.floor(self.resl), self.complete, tm:time().real/3600.0)})
+        logger:setNames{'epoch', 'ticks', 'ErrD', 'ErrG', 'Res', 'Trn(G)', 'Trn(D)', 'Elp'}
+        logger:add({epoch, self.globalTick, errD.real+errD.fake, errG, math.pow(2,math.floor(self.resl), self.complete.gen, self.complete.dis, tm:time().real/3600.0)})
     
 
     end
