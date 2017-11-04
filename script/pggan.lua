@@ -94,14 +94,8 @@ function PGGAN:ResolutionScheduler()
            
             -- remove previous fade-in layer and grow.
             network.flush_FadeInBlock(self.gen, self.dis, math.floor(self.resl))
-            print(string.format('--------------------------resl:%d, flush-------------------------', math.floor(self.resl)))
-            print(self.gen)
-            print(self.dis)
             network.grow_network(self.gen, self.dis, math.floor(self.resl),
                                  self.config.G, self.config.D, true)
-            print(string.format('--------------------------resl:%d, grow-------------------------', math.floor(self.resl)))
-            print(self.gen)
-            print(self.dis)
             self:renew_loader()
             self:renew_parameters()
             -- find fadein layer.  
@@ -109,11 +103,8 @@ function PGGAN:ResolutionScheduler()
             if #fadein_nodes~=0 then self.fadein = fadein_nodes[1] end
         end
         if math.ceil(self.resl)>=11 and self.flag_flush then
-            flag_flush = false
-            network.flush_FadeInBlock(self.gen, self.dis, math.floor(self.resl))
-            print(string.format('--------------------------resl:%d, flush-------------------------', math.floor(self.resl)))
-            print(self.gen)
-            print(self.dis)
+            self.flag_flush = false
+            network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl))
         end
     end
     if self.fadein ~= nil and self.resl%1.0 >= (1.0*self.training_tick)/(self.transition_tick+self.training_tick) then
@@ -134,6 +125,13 @@ function PGGAN:test()
     print(predict:size())
 end
 
+--[[
+function PGGAN:benchmark_GpuMemoryUsage()
+    require 'cutorch'
+    local free, total = cutorch.getMemoryUsage(opt.gpuid+1)
+    print(string.format('resl:%d, TotalMemory:%f', total))
+end
+]]--
 
 PGGAN['fDx'] = function(self, x)
     self.dis:zeroGradParameters()

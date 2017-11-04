@@ -85,14 +85,14 @@ function Discrim.intermediate_block(resl, d_config)
     local ndf = d_config['fmap_max']
     
     -- (3-->8 / 4-->16 / 5-->32 / 6-->64 / 7-->128 / 8-->256 / 9-->512)
-    assert(resl==3 or resl==4 or resl==5 or resl==6 or resl==7 or resl==8 or resl==9)
+    assert(resl==3 or resl==4 or resl==5 or resl==6 or resl==7 or resl==8 or resl==9 or resl==10)
     
     local halving = false
     local ndim = ndf
     if resl==3 or resl==4 or resl==5 then
         halving = false
         ndim = ndf
-    elseif resl==6 or resl==7 or resl==8 or resl==9 then
+    elseif resl==6 or resl==7 or resl==8 or resl==9 or resl==10 then
         halving = true
         for i=1,(resl-5) do ndim = ndim/2 end
     end
