@@ -39,10 +39,11 @@ function Generator.input_block(g_config)
     if flag_bn then input_block:add(SBatchNorm(ngf)) end
     if flag_lrelu then input_block:add(nn.LeakyReLU(0.2,true)) else input_block:add(nn.ReLU(true)) end
     
-    local nOut  = ngf
-    return input_block, nOut
+    local ndim  = ngf
+    return input_block, ndim
 end
 
+--[[
 function Generator.output_block(ndim, g_config)
     local flag_bn = g_config['use_bathnorm']
     local flag_lrelu = g_config['use_leakyrelu']
@@ -76,7 +77,7 @@ function Generator.output_block(ndim, g_config)
     --output_block:add(Linear())            -- Linear activation is needed.
     return output_block
 end
-
+]]--
 
 function Generator.intermediate_block(resl, g_config)
     local flag_bn = g_config['use_bathnorm']
@@ -87,14 +88,14 @@ function Generator.intermediate_block(resl, g_config)
     local nchannel = g_config['num_channels']
     
     -- (3-->8 / 4-->16 / 5-->32 / 6-->64 / 7-->128 / 8-->256 / 9-->512)
-    assert(resl==3 or resl==4 or resl==5 or resl==6 or resl==7 or resl==8 or resl==9)
+    assert(resl==3 or resl==4 or resl==5 or resl==6 or resl==7 or resl==8 or resl==9 or resl==10)
     
     local halving = false
     local ndim = ngf
     if resl==3 or resl==4 or resl==5 then
         halving = false
         ndim = ngf
-    elseif resl==6 or resl==7 or resl==8 or resl==9 then
+    elseif resl==6 or resl==7 or resl==8 or resl==9 or resl==10 then
         halving = true
         for i=1,(resl-5) do ndim = ndim/2 end
     end
@@ -133,7 +134,19 @@ function Generator.intermediate_block(resl, g_config)
     
     return inter_block, ndim
 end
+   
+function Generator.to_rgb_block(ndim, g_config)
+    local flag_tanh = g_config['use_tanh']
+    local nc = g_config['num_channels']
     
+    -- set output block
+    local to_rgb_block = nn.Sequential()
+    to_rgb_block:add(SFullConv(ndim, nc, 1, 1)
+                        :init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
+    if flag_tanh then to_rgb_block:add(nn.Tanh()) end 
+    return to_rgb_block
+end
+
 
 return Generator
 

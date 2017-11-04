@@ -42,12 +42,13 @@ function PGGAN:__init(model, criterion, opt, optimstate, config)
     self.resl = 2                   -- range from [2, 10] --> [4, 1024]
     self.kimgs = 0                  -- accumulated total number of images forwarded.
     self.batch_table = { [4]=32, [8]=32, [16]=32, [32]=16, [64]=16, [128]=16, [256]=12, [512]=4, [1024]=1 }         -- slightly different from the paper.
-    self.batchSize = self.batch_table[math.pow(2, self.resl+1)]
+    self.batchSize = self.batch_table[math.pow(2, self.resl)]
     self.transition_tick = opt.transition_tick
     self.training_tick = opt.training_tick
     self.complete = 0.0
     self.globalTick = 0
     self.fadein = nil
+    self.flag_flush = true
 
     -- init dataloader.
     self.loader = require 'script.myloader'
@@ -75,7 +76,7 @@ end
 -- should be called every iteration to ensure kimgs is counted properly.
 function PGGAN:ResolutionScheduler()
 
-    self.batchSize = self.batch_table[math.pow(2,math.floor(self.resl+1))]
+    self.batchSize = self.batch_table[math.pow(2,math.floor(self.resl))]
     local prev_kimgs = self.kimgs
     self.kimgs = self.kimgs + self.batchSize
     if (self.kimgs%TICK) < (prev_kimgs%TICK) then
@@ -84,41 +85,38 @@ function PGGAN:ResolutionScheduler()
         local prev_resl = math.floor(self.resl)
         self.resl = self.resl + 1.0/(self.transition_tick + self.training_tick)
         -- clamping, range: 4 ~ 1024
-        self.resl = math.max(2, math.min(9, self.resl))
+        self.resl = math.max(2, math.min(10.5, self.resl))
 
-    
+        -- flush network.
+        if self.flag_flush and self.resl%1.0 >= (1.0*self.training_tick)/(self.transition_tick+self.training_tick) then
+            self.flag_flush = false
+            network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl))
+            
+        end
         -- grow network
         if math.floor(self.resl) ~= prev_resl then
             self.flag_flush = true
-            self.batchSize = self.batch_table[math.pow(2, math.floor(self.resl+1))]
-           
-            -- remove previous fade-in layer and grow.
-            network.flush_FadeInBlock(self.gen, self.dis, math.floor(self.resl))
+            self.batchSize = self.batch_table[math.pow(2, math.floor(self.resl))]
             network.grow_network(self.gen, self.dis, math.floor(self.resl),
                                  self.config.G, self.config.D, true)
             self:renew_loader()
             self:renew_parameters()
             -- find fadein layer.  
             fadein_nodes = self.gen:findModules('nn.FadeInLayer')
-            if #fadein_nodes~=0 then self.fadein = fadein_nodes[1] end
+            if #fadein_nodes~=0 then 
+                self.fadein = fadein_nodes[1] 
+                self.complete = self.fadein.complete
+            end
+        end
+        if math.ceil(self.resl)>=11 and self.flag_flush then
+            self.flag_flush = false
+            network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl))
         end
     end
-    if self.fadein ~= nil and self.resl%1.0 >= (1.0*self.training_tick)/(self.transition_tick+self.training_tick) then
+    if self.fadein ~= nil and self.resl%1.0 <= (1.0*self.training_tick)/(self.transition_tick+self.training_tick) then
         self.fadein:updateAlpha(self.batchSize) 
         self.complete = self.fadein.complete
     end
-end
-
-function PGGAN:test()
-    -- generate noise(z_D)
-    self.noise = torch.Tensor(self.batch_table[math.pow(2, self.resl)], self.nz, 1, 1)
-    if self.noisetype == 'uniform' then self.noise:uniform(-1,1)
-    elseif self.noisetype == 'normal' then self.noise:normal(0,1) end
-    
-    local x_tilde = self.gen:forward(self.noise:cuda())
-    print(x_tilde:size())
-    local predict = self.dis:forward(x_tilde:cuda())
-    print(predict:size())
 end
 
 
@@ -126,8 +124,8 @@ PGGAN['fDx'] = function(self, x)
     self.dis:zeroGradParameters()
 
     -- generate noise(z)
-    self.noise = torch.Tensor(self.batch_table[math.pow(2, math.floor(self.resl+1))], self.nz, 1, 1):zero()
-    self.label = torch.Tensor(self.batch_table[math.pow(2, math.floor(self.resl+1))], 1):zero()
+    self.noise = torch.Tensor(self.batch_table[math.pow(2, math.floor(self.resl))], self.nz, 1, 1):zero()
+    self.label = torch.Tensor(self.batch_table[math.pow(2, math.floor(self.resl))], 1):zero()
     if self.noisetype == 'uniform' then self.noise:uniform(-1,1)
     elseif self.noisetype == 'normal' then self.noise:normal(0,1) end
     
@@ -177,14 +175,17 @@ end
 
 function PGGAN:renew_loader()
     self.loader.l_config.batchSize = self.batchSize
-    self.loader.l_config.loadSize = math.pow(2, math.floor(self.resl+1))
-    self.loader.l_config.sampleSize = math.pow(2, math.floor(self.resl+1))
+    self.loader.l_config.loadSize = math.pow(2, math.floor(self.resl))
+    self.loader.l_config.sampleSize = math.pow(2, math.floor(self.resl))
     self.loader:renew(self.loader.l_config)
     
 end
 
 local stacked = 0
 function PGGAN:train(loader)
+    --self:test()
+    --self:benchmark_GpuMemoryUsage()
+
     -- init logger
     os.execute('mkdir -p log')
     logger = optim.Logger(string.format('log/%s.log', self.opt.name))
@@ -210,6 +211,7 @@ function PGGAN:train(loader)
         end
         
         self:ResolutionScheduler()
+        
         local errD = self:fDx()
         local errG = self:fGx()
            
@@ -239,8 +241,8 @@ function PGGAN:train(loader)
                 --local grid = create_img_grid(im_fake:clone(), 128, 8)           -- 8x8 grid.
                 image.save(string.format('save/grid/%d.jpg', math.floor(globalIter/self.opt.display_iter)), grid)
                 -- save generated HQ fake image.            
-                os.execute(string.format('mkdir -p save/resl_%d', math.floor(self.resl+1)))
-                image.save(string.format('save/resl_%d/%d.jpg', math.floor(self.resl+1), math.floor(globalIter/self.opt.display_iter)), im_fake_hq:add(1):div(2))
+                os.execute(string.format('mkdir -p save/resl_%d', math.pow(2, math.floor(self.resl))))
+                image.save(string.format('save/resl_%d/%d.jpg', math.pow(2, math.floor(self.resl)), math.floor(globalIter/self.opt.display_iter)), im_fake_hq:add(1):div(2))
             end
         end
 
@@ -253,11 +255,12 @@ function PGGAN:train(loader)
         -- logging
         local log_msg = string.format('[E:%d][T:%d][%6d/%6d]    errD(real): %.4f | errD(fake): %.4f | errG: %.4f    [Res:%4d][Trn:%.1f%%][Elp(hr):%.4f]',
                                         epoch, self.globalTick, stacked, self.loader:size(), 
-                                        errD.real, errD.fake, errG, math.pow(2,math.floor(self.resl+1)), self.complete, tm:time().real/3600.0)
+                                        errD.real, errD.fake, errG, math.pow(2,math.floor(self.resl)), self.complete, tm:time().real/3600.0)
         print(log_msg)
         logger:setNames{'epoch', 'ticks', 'ErrD', 'ErrG', 'Res', 'Trn', 'Elp'}
-        logger:add({epoch, self.globalTick, errD.real+errD.fake, errG, math.pow(2,math.floor(self.resl+1), self.complete, tm:time().real/3600.0)})
-        
+        logger:add({epoch, self.globalTick, errD.real+errD.fake, errG, math.pow(2,math.floor(self.resl), self.complete, tm:time().real/3600.0)})
+    
+
     end
     -- stop timer.
     tm:stop()
@@ -279,7 +282,47 @@ end
 
 
 
+----------------------- Debugging functions --------------------------
+function PGGAN:test()
+    -- generate noise(z_D)
+    self.noise = torch.Tensor(self.batch_table[math.pow(2, self.resl)], self.nz, 1, 1)
+    if self.noisetype == 'uniform' then self.noise:uniform(-1,1)
+    elseif self.noisetype == 'normal' then self.noise:normal(0,1) end
+    
+    local x_tilde = self.gen:forward(self.noise:cuda())
+    print(x_tilde:size())
+    local predict = self.dis:forward(x_tilde:cuda())
+    print(predict:size())
+end
 
+function PGGAN:benchmark_GpuMemoryUsage()
+    require 'cutorch'
+    self.batchSize = self.batch_table[math.pow(2, math.floor(self.resl))]
+    for resl = 2, 11 do
+        
+        print('---------------------------------------------------------------------------------------')
+        local free, total = cutorch.getMemoryUsage(self.opt.gpuid+1)
+        print(string.format('[%s] resl:%d, total:%d MB, free:%d MB', 'before flush', math.floor(self.resl), total/1024/1024, free/1024/1024))
+        network.flush_FadeInBlock(self.gen, self.dis, resl)
+        local free, total = cutorch.getMemoryUsage(self.opt.gpuid+1)
+        print(string.format('[%s] resl:%d, total:%d MB, free:%d MB', 'after flush', math.floor(self.resl), total/1024/1024, free/1024/1024))
+        if resl ~= 11 then
+            self.resl = resl
+            network.grow_network(self.gen, self.dis, resl,
+                                    self.config.G, self.config.D, true)
+            self.batchSize = self.batch_table[math.pow(2, math.floor(self.resl))]
+            local free, total = cutorch.getMemoryUsage(self.opt.gpuid+1)
+            print(string.format('[%s] resl:%d, total:%d MB, free:%d MB', 'after growing', math.floor(self.resl), total/1024/1024, free/1024/1024))
+            self:renew_loader()
+            local errD = self:fDx()
+            local errG = self:fGx()
+            -- find fadein layer.  
+            fadein_nodes = self.gen:findModules('nn.FadeInLayer')
+            if #fadein_nodes~=0 then self.fadein = fadein_nodes[1] end
+        end
+
+    end
+end
 
 
 return PGGAN
