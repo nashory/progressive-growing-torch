@@ -43,41 +43,6 @@ function Generator.input_block(g_config)
     return input_block, ndim
 end
 
---[[
-function Generator.output_block(ndim, g_config)
-    local flag_bn = g_config['use_bathnorm']
-    local flag_lrelu = g_config['use_leakyrelu']
-    local flag_pxlnorm = g_config['use_pixelnorm']
-    local flag_tanh = g_config['use_tanh']
-    local nz = g_config['nz']
-    local ngf = g_config['fmap_max']
-    local nchannel = g_config['num_channels']
-    
-    -- set output block
-    local output_block = nn.Sequential()
-    output_block:add(UpSampleNearest(2.0))           -- scale up by factor of 2.0
-    -- conv1 (3x3)
-    output_block:add(SFullConv(ndim, 16, 3, 3, 1, 1, 1, 1)
-                        :init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
-    --if flag_pixel then output_block:add(PixelWise()) end
-    if flag_pixel then output_block:add(LRN(1)) end
-    if flag_bn then output_block:add(SBatchNorm(ndim/2)) end
-    if flag_lrelu then output_block:add(nn.LeakyReLU(0.2,true)) else output_block:add(nn.ReLU(true)) end
-    -- conv2 (3x3)
-    output_block:add(SFullConv(16, 16, 3, 3, 1, 1, 1, 1)
-                        :init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
-    --if flag_pixel then output_block:add(PixelWise()) end
-    if flag_pixel then output_block:add(LRN(1)) end
-    if flag_bn then output_block:add(SBatchNorm(ndim/2)) end
-    if flag_lrelu then output_block:add(nn.LeakyReLU(0.2,true)) else output_block:add(nn.ReLU(true)) end
-    -- conv3 (1x1)
-    output_block:add(SFullConv(16, nchannel, 1, 1)
-                        :init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
-    if flag_tanh then output_block:add(nn.Tanh()) end
-    --output_block:add(Linear())            -- Linear activation is needed.
-    return output_block
-end
-]]--
 
 function Generator.intermediate_block(resl, g_config)
     local flag_bn = g_config['use_bathnorm']
