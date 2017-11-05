@@ -46,7 +46,8 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
     local to_rgb_block = G.to_rgb_block(ndim, g_config)
     local fadein = nn.Sequential()
     fadein:add( nn.ConcatTable()
-                :add(nn.Sequential():add(nn.SpatialUpSamplingNearest(2.0)):add(prev_block))      -- for low resl
+                --:add(nn.Sequential():add(nn.SpatialUpSamplingNearest(2.0)):add(prev_block))      -- for low resl
+                :add(nn.Sequential():add(nn.UpSampling(2.0, 'nearest')):add(prev_block))      -- for low resl
                 :add(nn.Sequential():add(inter_block):add(to_rgb_block)))                       -- for high resl
     fadein:add(nn.FadeInLayer(transition_tick))
     gen:add(fadein)

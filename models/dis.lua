@@ -18,7 +18,7 @@ local WN = nn.WeightNorm
 
 
 function Discrim.output_block(d_config)
-    local flag_bn = d_config['use_bathnorm']
+    local flag_bn = d_config['use_batchnorm']
     local flag_lrelu = d_config['use_leakyrelu']
     local flag_pixel = d_config['use_pixewise']
     local flag_tanh = d_config['use_tanh']
@@ -50,7 +50,7 @@ end
 
 
 function Discrim.intermediate_block(resl, d_config)
-    local flag_bn = d_config['use_bathnorm']
+    local flag_bn = d_config['use_batchnorm']
     local flag_lrelu = d_config['use_leakyrelu']
     local flag_pixel = d_config['use_pixelwise']
     local ndf = d_config['fmap_max']
@@ -94,8 +94,9 @@ function Discrim.intermediate_block(resl, d_config)
         inter_block:add(SConv(ndim, ndim, 3, 3, 1, 1, 1, 1)
                             :init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
         --if flag_pixel then inter_block:add(PixelWise()) end
-        if flag_pixel then inter_block:add(LRN(1)) end
-        if flag_bn then inter_block:add(SBatchNorm(ndim)) end
+        --if flag_pixel then inter_block:add(LRN(1)) end
+        --if flag_bn then inter_block:add(SBatchNorm(ndim)) end
+        inter_block:add(SBatchNorm(ndim))
         if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
         inter_block:add(AvgPool(2,2,2,2))                   -- downsample by factor of 2.0
     end

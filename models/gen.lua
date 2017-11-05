@@ -17,7 +17,7 @@ local WN = nn.WeightNorm
 
 -- create generator structure.
 function Generator.input_block(g_config)
-    local flag_bn = g_config['use_bathnorm']
+    local flag_bn = g_config['use_batchnorm']
     local flag_lrelu = g_config['use_leakyrelu']
     local falg_pixel = g_config['use_pixelwise']
     local nz = g_config['nz']
@@ -45,7 +45,7 @@ end
 
 
 function Generator.intermediate_block(resl, g_config)
-    local flag_bn = g_config['use_bathnorm']
+    local flag_bn = g_config['use_batchnorm']
     local flag_lrelu = g_config['use_leakyrelu']
     local flag_pxlnorm = g_config['use_pixelnorm']
     local nz = g_config['nz']
@@ -67,11 +67,13 @@ function Generator.intermediate_block(resl, g_config)
 
     -- set intermediate block
     local inter_block = nn.Sequential()
-    inter_block:add(UpSampleNearest(2.0))           -- scale up by factor of 2.0
-    
+    --inter_block:add(UpSampleNearest(2.0))           -- scale up by factor of 2.0
+    inter_block:add(nn.UpSampling(2.0, 'nearest'))
+
     if halving then
         inter_block:add(SFullConv(ndim*2, ndim, 3, 3, 1, 1, 1, 1)
                             :init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
+        inter_block:add(SBatchNorm(ndim))
         --if flag_pixel then inter_block:add(PixelWise()) end
         if flag_pixel then inter_block:add(LRN(1)) end
         if flag_bn then inter_block:add(SBatchNorm(ndim)) end
@@ -92,8 +94,9 @@ function Generator.intermediate_block(resl, g_config)
         inter_block:add(SFullConv(ndim, ndim, 3, 3, 1, 1, 1, 1)
                             :init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
         --if flag_pixel then inter_block:add(PixelWise()) end
-        if flag_pixel then inter_block:add(LRN(1)) end
-        if flag_bn then inter_block:add(SBatchNorm(ndim)) end
+        --if flag_pixel then inter_block:add(LRN(1)) end
+        --if flag_bn then inter_block:add(SBatchNorm(ndim)) end
+        inter_block:add(SBatchNorm(ndim))
         if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
     end
     

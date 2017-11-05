@@ -13,7 +13,7 @@ optimizer.dis = {
 	method = adam,
 	config = {
 		lr = opt.lr,
-		beta1 = 0,
+		beta1 = 0.0,
 		beta2 = 0.99,
 		elipson = 1e-8,
 	},
@@ -25,7 +25,7 @@ optimizer.gen = {
 	method = adam,
 	config = {
 		lr = opt.lr,
-		beta1 = 0,
+		beta1 = 0.0,
 		beta2 = 0.99,
 		elipson = 1e-8,
 	},

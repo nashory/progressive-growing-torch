@@ -2,9 +2,7 @@ require 'nn'
 
 --require 'cunn'
 local opts = require 'script.opts'
---local gen = require 'models.gen'
 local network = require 'models.network'
---local dis = require 'models.dis'
 
 -- basic settings.
 torch.setdefaulttensortype('torch.FloatTensor')
