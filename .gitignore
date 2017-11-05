@@ -26,6 +26,7 @@
 
 # log files.
 *.log
+*.out
 
 # OS generated files.
 .DS_Store*

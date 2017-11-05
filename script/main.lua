@@ -2,9 +2,7 @@ require 'nn'
 
 --require 'cunn'
 local opts = require 'script.opts'
---local gen = require 'models.gen'
 local network = require 'models.network'
---local dis = require 'models.dis'
 
 -- basic settings.
 torch.setdefaulttensortype('torch.FloatTensor')
@@ -57,7 +55,7 @@ d_config = {
             ['normalize_latents']=true,
             ['use_wscale']=true,
             ['use_pixelwise']=true,
-            ['use_leakyrelu']=false,
+            ['use_leakyrelu']=true,
             ['use_batchnorm']=false,
             ['use_tanh']=true,
 }

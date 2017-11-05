@@ -36,7 +36,7 @@ function M.parse(arg)
 
 
 	-------------- Training options---------------
-	cmd:option('-lr', 0.0002, 'learning rate')
+	cmd:option('-lr', 0.0002, 'learning rate')         --0.0002
 	cmd:option('-noisetype', 'uniform', 'uniform/normal distribution noise.')
 
 	-- ndims of output features
@@ -46,7 +46,7 @@ function M.parse(arg)
 	cmd:option('-nz', 512, '# of dimension for input noise(z)')
 
     --------------- Progressive Growing options -------------
-	cmd:option('-transition_tick', 100, 'ticks for transition (1 tick = 1K iter)')
+	cmd:option('-transition_tick', 200, 'ticks for transition (1 tick = 1K iter)')               -- (10,5)
 	cmd:option('-training_tick', 100, 'ticks for training (1 tick = 1K iter)')
 	cmd:option('-total_tick', 1000000, 'ticks for entire training (1 tick = 1K iter)')
 
