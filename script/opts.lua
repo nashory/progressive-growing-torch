@@ -46,8 +46,8 @@ function M.parse(arg)
 	cmd:option('-nz', 512, '# of dimension for input noise(z)')
 
     --------------- Progressive Growing options -------------
-	cmd:option('-transition_tick', 40, 'ticks for transition (1 tick = 1K iter)')               -- (10,5)
-	cmd:option('-training_tick', 20, 'ticks for training (1 tick = 1K iter)')
+	cmd:option('-transition_tick', 200, 'ticks for transition (1 tick = 1K iter)')               -- (10,5)
+	cmd:option('-training_tick', 100, 'ticks for training (1 tick = 1K iter)')
 	cmd:option('-total_tick', 1000000, 'ticks for entire training (1 tick = 1K iter)')
 
 
