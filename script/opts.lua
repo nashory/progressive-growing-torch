@@ -49,6 +49,7 @@ function M.parse(arg)
 	cmd:option('-transition_tick', 800, 'ticks for transition (1 tick = 1K iter)')               -- (10,5)
 	cmd:option('-training_tick', 400, 'ticks for training (1 tick = 1K iter)')
 	cmd:option('-total_tick', 1000000, 'ticks for entire training (1 tick = 1K iter)')
+    cmd:option('-epsilon_drift', 0.001, 'epsilon_drift')
 
 
 	cmd:text()

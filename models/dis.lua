@@ -27,9 +27,9 @@ function Discrim.output_block(d_config)
     
     -- set output block
     local output_block = nn.Sequential()
-    output_block:add(MiniBatch())
+    --output_block:add(MiniBatch())
     -- conv1 (3x3)
-    output_block:add(SConv(ndf+1, ndf, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
+    output_block:add(SConv(ndf, ndf, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
     if flag_pixel then output_block:add(LRN(1)) end
     if flag_bn then output_block:add(SBatchNorm(ndf)) end
     if flag_lrelu then output_block:add(nn.LeakyReLU(0.2,true)) else output_block:add(nn.ReLU(true)) end

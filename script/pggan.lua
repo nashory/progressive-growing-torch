@@ -112,8 +112,8 @@ function PGGAN:resl_scheduler()
 
     -- transition/training tick schedule.
     if math.floor(self.resl)==2 then
-        self.training_tick = 20
-        self.transition_tick = 40
+        self.training_tick = 40
+        self.transition_tick = 20
     else
         self.training_tick = self.opt.training_tick
         self.transition_tick = self.opt.transition_tick
@@ -122,12 +122,12 @@ function PGGAN:resl_scheduler()
     
     -- update alpha if fade-in layer exist.
     if self.fadein.gen ~= nil and self.resl%1.0 <= (self.transition_tick)*delta then
-        self.fadein.gen:updateAlpha(self.batchSize)
+        self.fadein.gen:updateAlpha(delta)
         self.complete.gen = self.fadein.gen.complete
         self.state = 'gtrns'
     end
     if  self.fadein.dis ~= nil and self.resl%1.0 >= (self.training_tick+self.transition_tick)*delta and self.resl%1.0 <= (self.training_tick+self.transition_tick*2)*delta then
-        self.fadein.dis:updateAlpha(self.batchSize)
+        self.fadein.dis:updateAlpha(delta)
         self.complete.dis = self.fadein.dis.complete
         self.state = 'dtrns'
     end
@@ -203,6 +203,9 @@ PGGAN['fDx'] = function(self, x)
     elseif self.noisetype == 'normal' then self.noise:normal(0,1) end
     
     -- train with real(x)
+    --local d_errD_drift = self.opt.epsilon_drift*(self.param_dis:pow(2):sum()/self.param_dis:size())        -- get drift loss.
+    --local d_errD_drift = self.opt.epsilon_drift*(self.param_dis:pow(2):sum())        -- get drift loss.
+    --print(d_errD_drift)
     self.data = self.loader:getBatch('train')
     self.x = self:feed_interpolated_input(self.data:clone())
     self.label:fill(1)          -- real label (1)
@@ -210,6 +213,7 @@ PGGAN['fDx'] = function(self, x)
     local errD_real = self.crit_adv:forward(fx:cuda(), self.label:cuda())
     local d_errD_real = self.crit_adv:backward(fx:cuda(), self.label:cuda())
     local d_fx = self.dis:backward(self.x:cuda(), d_errD_real:cuda())
+    --local d_fx = self.dis:backward(self.x:cuda(), d_errD_real:add(-1*d_errD_drift):cuda())
 
     -- train with fake(x_tilde)
     self.label:fill(0)          -- fake label (0)

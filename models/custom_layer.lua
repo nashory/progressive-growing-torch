@@ -57,10 +57,11 @@ function FadeInLayer:updateOutput(input)
     self.output = torch.add(input[1]:mul(1.0-self.alpha), input[2]:mul(self.alpha))
     return self.output
 end
-function FadeInLayer:updateAlpha(batchSize)
-    self.accum = self.accum + batchSize
+function FadeInLayer:updateAlpha(delta)
+    --self.accum = self.accum + batchSize
     -- linear interpolation
-    self.alpha = (self.accum) / (self.transition_tick*1000.0)
+    --self.alpha = (self.accum) / (self.transition_tick*1000.0)
+    self.alpha = self.alpha + delta
     self.alpha = math.max(0, math.min(1, self.alpha))
     self.complete = (self.alpha)*100.0
 end
@@ -70,8 +71,15 @@ function FadeInLayer:updateGradInput(input, gradOutput)
     self.gradInput[1] = input[1]:clone():fill(0)
     self.gradInput[2] = input[2]:clone():fill(0)
 
+    --print('alpha:' .. self.alpha)
+    --print(self.alpha)
+    --print('1-alpha:' .. 1.0-self.alpha)
     self.gradInput[1]:copy(gradOutput:clone():mul(1.0-self.alpha))
     self.gradInput[2]:copy(gradOutput:clone():mul(self.alpha))
+    --print('[1] grad sum:' .. gradOutput:sum())
+    --print('[2] alpha + 1-alpha:' .. gradOutput:clone():mul(1.0-self.alpha):sum() + gradOutput:clone():mul(self.alpha):sum())
+    --self.gradInput[1]:copy(gradOutput)
+    --self.gradInput[2]:copy(gradOutput)
 
     return self.gradInput
 end
