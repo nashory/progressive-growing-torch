@@ -108,7 +108,7 @@ end
 -- step 3. (transition_tick) --> transition in discriminator.
 -- step 4. (training_tick) --> train and stabilize.
 -- total period: (2*training_tick + 2*transition_tick)
-function PGGAN:ResolutionScheduler()
+function PGGAN:resl_scheduler()
 
     -- transition/training tick schedule.
     if math.floor(self.resl)==2 then
@@ -118,6 +118,7 @@ function PGGAN:ResolutionScheduler()
         self.training_tick = self.opt.training_tick
         self.transition_tick = self.opt.transition_tick
     end
+    local delta = 1.0/(2*self.training_tick + 2*self.transition_tick)
     
     -- update alpha if fade-in layer exist.
     if self.fadein.gen ~= nil and self.resl%1.0 <= (self.transition_tick)*delta then
@@ -132,7 +133,6 @@ function PGGAN:ResolutionScheduler()
     end
 
 
-    local delta = 1.0/(2*self.training_tick + 2*self.transition_tick)
     self.batchSize = self.batch_table[math.pow(2,math.floor(self.resl))]
     local prev_kimgs = self.kimgs
     self.kimgs = self.kimgs + self.batchSize
@@ -283,8 +283,11 @@ function PGGAN:train(loader)
             epoch = epoch + 1 
             stacked = stacked%math.ceil(self.loader:size())
         end
-        self:ResolutionScheduler()
+
+        -- scheduling resolition transition
+        self:resl_scheduler()
         
+        -- forward / backward
         local errD = self:fDx()
         local errG = self:fGx()
            
@@ -321,7 +324,6 @@ function PGGAN:train(loader)
                             math.floor(globalIter/self.opt.display_iter)), 
                             im_fake_hq:add(1):div(2))
             end
-            print('D')  
         end
 
         -- snapshot (save model)

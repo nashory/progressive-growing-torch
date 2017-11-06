@@ -65,8 +65,8 @@ function Generator.intermediate_block(resl, g_config)
 
     -- set intermediate block
     local inter_block = nn.Sequential()
-    --inter_block:add(UpSampleNearest(2.0))           -- scale up by factor of 2.0
-    inter_block:add(nn.UpSampling(2.0, 'nearest'))
+    inter_block:add(UpSampleNearest(2.0))           -- scale up by factor of 2.0
+    --inter_block:add(nn.UpSampling(2.0, 'nearest'))
 
     if halving then
         inter_block:add(SFullConv(ndim*2, ndim, 3, 3, 1, 1, 1, 1)
