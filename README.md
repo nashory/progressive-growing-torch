@@ -14,11 +14,13 @@ __YOUR CONTRIBUTION IS INVALUABLE FOR THIS PROJECT :)__
 
 ## How to use?
 
-__[step 1.] Preapre dataset__   
+__[step 1.] Prepare dataset__   
 CelebA-HQ dataset is not available yet, so I used 100,000 generated PNGs of CelebA-HQ released by the author.   
 The quality of the generated image was good enough for training and verifying the preformance of the code.  
 If the CelebA-HQ dataset is releasted in then near future, I will update the experimental result.  
 [[download]](https://drive.google.com/open?id=0B4qLcYyJmiz0MUVMVFEyclJnRmc)
+
++ CAUTION: loading 1024 x 1024 image and resizing every forward process makes training slow. I recommend you to use normal CelebA dataset until the output resolution converges to 256x256.
 
 ~~~
 ---------------------------------------------
@@ -51,11 +53,13 @@ results so far (just started training. I will keep updating the result.)
 ## What does the printed log mean?
 ~~~
 (example)
-[E:0][T:268][268992/202599]    errD(real): 0.1464 | errD(fake): 0.3025 | errG: 0.2241    [Res:   8][Trn:100.0%][Elp(hr):0.6652]
+[E:0][T:91][ 91872/202599]    errD(real): 0.2820 | errD(fake): 0.1557 | errG: 0.3838    [Res:   4][Trn(G):0.0%][Trn(D):0.0%][Elp(hr):0.2008]
 ~~~
-+ E: epoch / T: ticks / errD,errG: loss
++ E: epoch / T: ticks (1tick = 1000imgs) / errD,errG: loss of discrminator and generator
 + Res: current resolution of output
 + Trn: transition progress (if 100%, in training phase. if less than 100%, in transition phase using fade-in layer.)
+  + first Trn : Transition of fade-in layer in generator.
+  + second Trn : Transition of fade-in layer in discriminator.
 + Elp(hr): Elapsed Time (Hour)
 
 
@@ -74,4 +78,5 @@ results so far (just started training. I will keep updating the result.)
 + [soumith/dcgan.torch](https://github.com/soumith/dcgan.torch)
 
 ## Author
-MinchulShin, [@nashory](https://github.com/nashory)
+MinchulShin, [@nashory](https://github.com/nashory)  
+![image](https://camo.githubusercontent.com/e053bc3e1b63635239e8a44574e819e62ab3e3f4/687474703a2f2f692e67697068792e636f6d2f49634a366e36564a4e6a524e532e676966)
