@@ -20,9 +20,6 @@ function network.grow_network(gen, dis, resl, g_config, d_config, use_cuda)
 
     local use_cuda = use_cuda or true
     assert(type(use_cuda)=='boolean', 'use_cuda flag = true/false')
-
-    -- flush previous fade-in layer first.
-    --network.flush_FadeInBlock(gen, dis, resl)
     
     -- attach new fade-in layer to the last.
     if resl >2 and resl <= 10 then
@@ -46,7 +43,6 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
     local to_rgb_block = G.to_rgb_block(ndim, g_config)
     local fadein = nn.Sequential()
     fadein:add( nn.ConcatTable()
-                --:add(nn.Sequential():add(nn.SpatialUpSamplingNearest(2.0)):add(prev_block))      -- for low resl
                 :add(nn.Sequential():add(nn.UpSampling(2.0, 'nearest')):add(prev_block))        -- for low resl
                 :add(nn.Sequential():add(inter_block):add(to_rgb_block)))                       -- for high resl
     fadein:add(nn.FadeInLayer(transition_tick))

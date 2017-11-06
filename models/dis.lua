@@ -10,7 +10,7 @@ local Discrim = {}
 local SBatchNorm = nn.SpatialBatchNormalization
 local SConv = nn.SpatialConvolution
 local MiniBatch = nn.MinibatchStatConcat
---local AvgPool = nn.SpatialAveragePooling
+local AvgPool = nn.SpatialAveragePooling
 local MaxPool = nn.SpatialMaxPooling
 local PixelWise = nn.PixelWiseNorm
 local LRN = nn.SpatialCrossMapLRN
@@ -27,9 +27,9 @@ function Discrim.output_block(d_config)
     
     -- set output block
     local output_block = nn.Sequential()
-    --output_block:add(MiniBatch())
+    output_block:add(MiniBatch())
     -- conv1 (3x3)
-    output_block:add(SConv(ndf, ndf, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
+    output_block:add(SConv(ndf+1, ndf, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
     if flag_pixel then output_block:add(LRN(1)) end
     if flag_bn then output_block:add(SBatchNorm(ndf)) end
     if flag_lrelu then output_block:add(nn.LeakyReLU(0.2,true)) else output_block:add(nn.ReLU(true)) end
@@ -41,8 +41,6 @@ function Discrim.output_block(d_config)
 
     -- Linear
     output_block:add(nn.View(ndf))          -- batchsize x ndf
-    --output_block:add(nn.Linear(ndf, 1):init('weight', nninit.kaiming, { dist = 'normal', gain = {'lrelu', leakiness = 0.2} }))
-    --output_block:add(nn.Linear(ndf, 1):init('weight', nninit.kaiming, { dist = 'normal', gain = {'relu'} }))
     output_block:add(nn.Linear(ndf, 1))
     output_block:add(nn.Sigmoid())
     return output_block, ndf
@@ -80,7 +78,7 @@ function Discrim.intermediate_block(resl, d_config)
         --if flag_bn then inter_block:add(SBatchNorm(ndim*2)) end
         inter_block:add(SBatchNorm(ndim))
         if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
-        inter_block:add(MaxPool(2,2,2,2))                   -- downsample by factor of 2.0
+        inter_block:add(AvgPool(2,2,2,2))                   -- downsample by factor of 2.0
     else 
         inter_block:add(SConv(ndim, ndim, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
         if flag_pixel then inter_block:add(LRN(1)) end
@@ -91,7 +89,7 @@ function Discrim.intermediate_block(resl, d_config)
         --if flag_bn then inter_block:add(SBatchNorm(ndim)) end
         inter_block:add(SBatchNorm(ndim))
         if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
-        inter_block:add(MaxPool(2,2,2,2))                   -- downsample by factor of 2.0
+        inter_block:add(AvgPool(2,2,2,2))                   -- downsample by factor of 2.0
     end
     
     return inter_block, ndim

@@ -75,7 +75,6 @@ function PGGAN:__init(model, criterion, opt, optimstate, config)
 end
 
 function PGGAN:feed_interpolated_input(src)
-    --local x = self.loader:getBatch('train')
     local x = src
     if self.state == 'gtrns' and math.floor(self.resl) >2 then
         local x_intp = torch.Tensor(x:size()):zero()
@@ -110,16 +109,16 @@ end
 -- step 4. (training_tick) --> train and stabilize.
 -- total period: (2*training_tick + 2*transition_tick)
 function PGGAN:ResolutionScheduler()
-    
+
     -- transition/training tick schedule.
     if math.floor(self.resl)==2 then
-        self.training_tick = 10
-        self.transition_tick = 20
+        self.training_tick = 20
+        self.transition_tick = 40
     else
         self.training_tick = self.opt.training_tick
         self.transition_tick = self.opt.transition_tick
     end
-
+    
     -- update alpha if fade-in layer exist.
     if self.fadein.gen ~= nil and self.resl%1.0 <= (self.transition_tick)*delta then
         self.fadein.gen:updateAlpha(self.batchSize)
@@ -131,6 +130,7 @@ function PGGAN:ResolutionScheduler()
         self.complete.dis = self.fadein.dis.complete
         self.state = 'dtrns'
     end
+
 
     local delta = 1.0/(2*self.training_tick + 2*self.transition_tick)
     self.batchSize = self.batch_table[math.pow(2,math.floor(self.resl))]
@@ -283,7 +283,6 @@ function PGGAN:train(loader)
             epoch = epoch + 1 
             stacked = stacked%math.ceil(self.loader:size())
         end
-        
         self:ResolutionScheduler()
         
         local errD = self:fDx()
@@ -302,28 +301,27 @@ function PGGAN:train(loader)
             local im_fake = self.gen:forward(self.test_noise:cuda()):clone()
             local im_fake_hq = size_resample(im_fake[{{1},{},{},{}}]:squeeze(), 1024)                -- hightest resolution we are targeting.
             local im_real_hq = size_resample(self.x[{{1},{},{},{}}]:squeeze(), 1024)                -- hightest resolution we are targeting.
-            --local im_real_src = size_resample(self.x_src[{{1},{},{},{}}]:squeeze(), 1024)                -- hightest resolution we are targeting.
             local grid = create_img_grid(im_fake:clone(), 128, 4)           -- 4x4 grid.
 
                 
             self.disp.image(grid, {win=self.opt.display_id*1 + self.opt.gpuid, title=self.opt.server_name})
             self.disp.image(im_fake_hq, {win=self.opt.display_id*2 + self.opt.gpuid, title=self.opt.server_name})
             self.disp.image(im_real_hq, {win=self.opt.display_id*4 + self.opt.gpuid, title=self.opt.server_name})
-            --self.disp.image(im_real_src, {win=self.opt.display_id*6 + self.opt.gpuid, title=self.opt.server_name})
-           
             if (globalIter%(self.opt.display_iter*self.opt.save_jpg_iter)==0) then
                 -- save image as jpg grid.
                 os.execute(string.format('mkdir -p save/grid'))   
-                --local grid = create_img_grid(im_fake:clone(), 128, 8)           -- 8x8 grid.
-                image.save(string.format('save/grid/%d_%s_%.1f_%.1f.jpg', math.floor(globalIter/self.opt.display_iter), self.state, self.complete.gen, self.complete.dis), grid)
+                image.save( string.format('save/grid/%d_%s_%.1f_%.1f.jpg', 
+                            math.floor(globalIter/self.opt.display_iter), 
+                            self.state, self.complete.gen, self.complete.dis), 
+                            grid)
                 -- save generated HQ fake image.            
                 os.execute(string.format('mkdir -p save/resl_%d', math.pow(2, math.floor(self.resl))))
-                image.save(string.format('save/resl_%d/%d.jpg', math.pow(2, math.floor(self.resl)), math.floor(globalIter/self.opt.display_iter)), im_fake_hq:add(1):div(2))
-                
-                --os.execute(string.format('mkdir -p save/intp_%d', math.pow(2, math.floor(self.resl))))
-                --image.save(string.format('save/intp_%d/%d_intp.jpg', math.pow(2, math.floor(self.resl)), math.floor(globalIter/self.opt.display_iter)), im_real_hq:add(1):div(2))
-                --image.save(string.format('save/intp_%d/%d_src.jpg', math.pow(2, math.floor(self.resl)), math.floor(globalIter/self.opt.display_iter)), im_real_src:add(1):div(2))
+                image.save( string.format('save/resl_%d/%d.jpg', 
+                            math.pow(2, math.floor(self.resl)), 
+                            math.floor(globalIter/self.opt.display_iter)), 
+                            im_fake_hq:add(1):div(2))
             end
+            print('D')  
         end
 
         -- snapshot (save model)
@@ -335,10 +333,13 @@ function PGGAN:train(loader)
         -- logging
         local log_msg = string.format('[E:%d][T:%d][%6d/%6d]    errD(real): %.4f | errD(fake): %.4f | errG: %.4f    [Res:%4d][Trn(G):%.1f%%][Trn(D):%.1f%%][Elp(hr):%.4f]',
                                         epoch, self.globalTick, stacked, self.loader:size(), 
-                                        errD.real, errD.fake, errG, math.pow(2,math.floor(self.resl)), self.complete.gen, self.complete.dis, tm:time().real/3600.0)
+                                        errD.real, errD.fake, errG, math.pow(2,math.floor(self.resl)), 
+                                        self.complete.gen, self.complete.dis, tm:time().real/3600.0)
         print(log_msg)
         logger:setNames{'epoch', 'ticks', 'ErrD', 'ErrG', 'Res', 'Trn(G)', 'Trn(D)', 'Elp'}
-        logger:add({epoch, self.globalTick, errD.real+errD.fake, errG, math.pow(2,math.floor(self.resl), self.complete.gen, self.complete.dis, tm:time().real/3600.0)})
+        logger:add({epoch, self.globalTick, errD.real+errD.fake, errG, 
+                    math.pow(2,math.floor(self.resl), self.complete.gen, 
+                    self.complete.dis, tm:time().real/3600.0)})
     
 
     end
