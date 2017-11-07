@@ -16,6 +16,7 @@
 
 require 'sys'
 require 'optim'
+require 'hdf5'
 require 'image'
 require 'math'
 require 'script.utils'
@@ -50,7 +51,7 @@ function PGGAN:__init(model, criterion, opt, optimstate, config)
     self.complete= {['gen']=0.0, ['dis']=0.0}
     self.flag_flush_gen = true
     self.flag_flush_dis = true
-    self.state = 'gstab'
+    self.state = 'stab'
 
 
     -- init dataloader.
@@ -84,16 +85,6 @@ function PGGAN:feed_interpolated_input(src)
             x_intp[{{i},{},{},{}}]:copy(torch.add(x_up:mul(self.fadein.gen.alpha), x_down:mul(1.0-self.fadein.gen.alpha)))           -- iterpolated output
         end
         return x_intp
-    --[[
-    elseif self.state == 'dtrns' and math.floor(self.resl) >2 then
-        local x_intp = torch.Tensor(x:size()):zero()
-        for i = 1, x_intp:size(1) do
-            local x_up = x[{{i},{},{},{}}]:squeeze()
-            local x_down = size_resample(size_resample(x_up, x:size(3)*0.5), x:size(3))
-            x_intp[{{i},{},{},{}}]:copy(torch.add(x_up:mul(self.fadein.dis.alpha), x_down:mul(1.0-self.fadein.dis.alpha)))           -- iterpolated output
-        end
-        return x_intp
-    ]]--
     else
         return x
     end
@@ -104,30 +95,30 @@ end
 -- this function will schedule image resolution factor(resl) progressively.
 -- should be called every iteration to ensure kimgs is counted properly.
 -- step 1. (transition_tick) --> transition in generator.
--- step 2. (training_tick) --> train and stabilize.
--- step 3. (transition_tick) --> transition in discriminator.
--- step 4. (training_tick) --> train and stabilize.
--- total period: (2*training_tick + 2*transition_tick)
+-- step 2. (transition_tick) --> transition in discriminator.
+-- step 3. (training_tick) --> stabilize.
+-- total period: (training_tick + 2*transition_tick)
 function PGGAN:resl_scheduler()
 
     -- transition/training tick schedule.
     if math.floor(self.resl)==2 then
-        self.training_tick = 40
-        self.transition_tick = 20
+        self.training_tick = 200
+        self.transition_tick = 100
     else
         self.training_tick = self.opt.training_tick
         self.transition_tick = self.opt.transition_tick
     end
-    local delta = 1.0/(2*self.training_tick + 2*self.transition_tick)
+    local delta = 1.0/(self.training_tick + 2*self.transition_tick)
+    local d_alpha = 1.0*self.batchSize/self.transition_tick/TICK
     
     -- update alpha if fade-in layer exist.
     if self.fadein.gen ~= nil and self.resl%1.0 <= (self.transition_tick)*delta then
-        self.fadein.gen:updateAlpha(delta)
+        self.fadein.gen:updateAlpha(d_alpha)
         self.complete.gen = self.fadein.gen.complete
         self.state = 'gtrns'
     end
-    if  self.fadein.dis ~= nil and self.resl%1.0 >= (self.training_tick+self.transition_tick)*delta and self.resl%1.0 <= (self.training_tick+self.transition_tick*2)*delta then
-        self.fadein.dis:updateAlpha(delta)
+    if  self.fadein.dis ~= nil and self.resl%1.0 >= (self.transition_tick)*delta and self.resl%1.0 <= (self.transition_tick*2)*delta then
+        self.fadein.dis:updateAlpha(d_alpha)
         self.complete.dis = self.fadein.dis.complete
         self.state = 'dtrns'
     end
@@ -147,22 +138,22 @@ function PGGAN:resl_scheduler()
         -- flush network.
         if self.flag_flush_gen and self.resl%1.0 >= (self.transition_tick)*delta then
             if self.fadein.gen ~= nil then
-                self.fadein.gen:updateAlpha(self.batchSize)
+                self.fadein.gen:updateAlpha(d_alpha)
                 self.complete.gen = self.fadein.gen.complete
             end
             self.flag_flush_gen = false
             network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl), 'gen')
             self.fadein.gen = nil
-            self.state = 'gstab'
-        elseif self.flag_flush_dis and self.resl%1.0 >= (self.transition_tick*2 + self.training_tick)*delta then
+            self.state = 'dtrns'
+        elseif self.flag_flush_dis and self.resl%1.0 >= (self.transition_tick*2)*delta then
             if self.fadein.dis ~= nil then
-                self.fadein.dis:updateAlpha(self.batchSize)
+                self.fadein.dis:updateAlpha(d_alpha)
                 self.complete.dis = self.fadein.dis.complete
             end
             self.flag_flush_dis = false
             network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl), 'dis') 
             self.fadein.dis = nil
-            self.state = 'dstab'
+            self.state = 'stab'
         end
         -- grow network
         if math.floor(self.resl) ~= prev_resl then
@@ -180,14 +171,14 @@ function PGGAN:resl_scheduler()
             local fadein_nodes = self.dis:findModules('nn.FadeInLayer')
             if #fadein_nodes~=0 then self.fadein.dis = fadein_nodes[1] end
             self.complete.dis = self.fadein.dis.complete
-            self.state = 'gstab'
+            self.state = 'gtrns'
         end
         if math.ceil(self.resl)>=11 and self.flag_flush then
             self.flag_flush_gen = false
             self.flag_flush_dis = false
             network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl), 'gen')
             network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl), 'dis')
-            self.state = 'final'
+            self.state = 'stab'
         end
     end
 end
@@ -203,17 +194,14 @@ PGGAN['fDx'] = function(self, x)
     elseif self.noisetype == 'normal' then self.noise:normal(0,1) end
     
     -- train with real(x)
-    --local d_errD_drift = self.opt.epsilon_drift*(self.param_dis:pow(2):sum()/self.param_dis:size())        -- get drift loss.
-    --local d_errD_drift = self.opt.epsilon_drift*(self.param_dis:pow(2):sum())        -- get drift loss.
-    --print(d_errD_drift)
     self.data = self.loader:getBatch('train')
     self.x = self:feed_interpolated_input(self.data:clone())
     self.label:fill(1)          -- real label (1)
     local fx = self.dis:forward(self.x:cuda())
+    local d_errD_drift = -1*self.opt.epsilon_drift*(self.param_dis:clone():pow(2):sum()/self.param_dis:size(1))  -- get drift loss.
     local errD_real = self.crit_adv:forward(fx:cuda(), self.label:cuda())
     local d_errD_real = self.crit_adv:backward(fx:cuda(), self.label:cuda())
-    local d_fx = self.dis:backward(self.x:cuda(), d_errD_real:cuda())
-    --local d_fx = self.dis:backward(self.x:cuda(), d_errD_real:add(-1*d_errD_drift):cuda())
+    local d_fx = self.dis:backward(self.x:cuda(), torch.add(d_errD_real, d_errD_drift):cuda())
 
     -- train with fake(x_tilde)
     self.label:fill(0)          -- fake label (0)
@@ -222,7 +210,7 @@ PGGAN['fDx'] = function(self, x)
     self.fx_tilde = self.dis:forward(self.x_tilde:cuda())
     local errD_fake = self.crit_adv:forward(self.fx_tilde:cuda(), self.label:cuda())
     local d_errD_fake = self.crit_adv:backward(self.fx_tilde:cuda(), self.label:cuda())
-    local d_fx_tilde = self.dis:backward(self.x_tilde:cuda(), d_errD_fake:cuda())
+    local d_fx_tilde = self.dis:backward(self.x_tilde:cuda(), torch.add(d_errD_fake, d_errD_drift):cuda())
    
     -- return error.
     local errD = {  ['real'] = errD_real,
@@ -306,21 +294,23 @@ function PGGAN:train(loader)
         -- display
         if (globalIter%self.opt.display_iter==0) and (self.opt.display) then
             local im_fake = self.gen:forward(self.test_noise:cuda()):clone()
-            local im_fake_hq = size_resample(im_fake[{{1},{},{},{}}]:squeeze(), 1024)                -- hightest resolution we are targeting.
+            local im_fake_hq = size_resample(im_fake[{{1},{},{},{}}]:squeeze(), 1024)               -- hightest resolution we are targeting.
             local im_real_hq = size_resample(self.x[{{1},{},{},{}}]:squeeze(), 1024)                -- hightest resolution we are targeting.
-            local grid = create_img_grid(im_fake:clone(), 128, 4)           -- 4x4 grid.
+            local grid_test = create_img_grid(im_fake:clone(), 128, 4)                  -- 4x4 grid.
+            local grid_rand = create_img_grid(self.x_tilde:clone(), 128, 4)             -- 4x4 grid.
 
                 
-            self.disp.image(grid, {win=self.opt.display_id*1 + self.opt.gpuid, title=self.opt.server_name})
-            self.disp.image(im_fake_hq, {win=self.opt.display_id*2 + self.opt.gpuid, title=self.opt.server_name})
-            self.disp.image(im_real_hq, {win=self.opt.display_id*4 + self.opt.gpuid, title=self.opt.server_name})
+            self.disp.image(grid_test, {win=self.opt.display_id*1 + self.opt.gpuid, title=self.opt.server_name})
+            self.disp.image(grid_rand, {win=self.opt.display_id*2 + self.opt.gpuid, title=self.opt.server_name})
+            self.disp.image(im_fake_hq, {win=self.opt.display_id*4 + self.opt.gpuid, title=self.opt.server_name})
+            self.disp.image(im_real_hq, {win=self.opt.display_id*8 + self.opt.gpuid, title=self.opt.server_name})
             if (globalIter%(self.opt.display_iter*self.opt.save_jpg_iter)==0) then
                 -- save image as jpg grid.
                 os.execute(string.format('mkdir -p save/grid'))   
                 image.save( string.format('save/grid/%d_%s_%.1f_%.1f.jpg', 
                             math.floor(globalIter/self.opt.display_iter), 
                             self.state, self.complete.gen, self.complete.dis), 
-                            grid)
+                            grid_test)
                 -- save generated HQ fake image.            
                 os.execute(string.format('mkdir -p save/resl_%d', math.pow(2, math.floor(self.resl))))
                 image.save( string.format('save/resl_%d/%d.jpg', 
@@ -331,10 +321,12 @@ function PGGAN:train(loader)
         end
 
         -- snapshot (save model)
-        if self.resl>9 and self.globalTick%self.opt.snapshot_every==0 then
-            local data = {dis = self.dis, gen = self.gen, optim = {dis = optimizer.dis.optimstate, gen = optimizer.gen.optimstate}}
-            self:snapshot(string.format('repo/%s', self.opt.name), self.opt.name, totalIter, data)
-        end
+        local data = {  ['dis'] = self.dis:clearState(), 
+                        ['gen'] = self.gen:clearState(),
+                        ['state'] = {   ['dis'] = optimizer.dis.optimstate,
+                                        ['gen'] = optimizer.gen.optimstate,
+                                        ['resl'] = self.resl,}}
+        self:snapshot(string.format('repo/%s', self.opt.name), self.opt.name, data)
 
         -- logging
         local log_msg = string.format('[E:%d][T:%d][%6d/%6d]    errD(real): %.4f | errD(fake): %.4f | errG: %.4f    [Res:%4d][Trn(G):%.1f%%][Trn(D):%.1f%%][Elp(hr):%.4f]',
@@ -354,16 +346,19 @@ function PGGAN:train(loader)
 end
 
 
-function PGGAN:snapshot(path, fname, iter, data)
+function PGGAN:snapshot(path, fname, data)
     -- if dir not exist, create it.
     if not paths.dirp(path) then    os.execute(string.format('mkdir -p %s', path)) end
-    
-    local fname = fname .. '_Iter' .. iter .. '.t7'
-    local iter_per_epoch = math.ceil(self.dataset:size()/self.batchSize)
-    if iter % math.ceil(self.opt.snapshot_every*iter_per_epoch) == 0 then
+    -- save every 100 tick if the network is in stabilization phase. 
+    local fname = fname ..'_R' .. math.floor(self.resl) .. '_T' .. self.globalTick
+    if self.globalTick%100==0 and self.state=='stab' then
         local save_path = path .. '/' .. fname
-        torch.save(save_path)
-        print('[Snapshot]: saved model @ ' .. save_path)
+        if not paths.filep(save_path .. '_dis.t7') then torch.save(save_path .. '_dis.t7', data.dis) end
+        if not paths.filep(save_path .. '_gen.t7') then torch.save(save_path .. '_gen.t7', data.dis) end
+        if not paths.filep(save_path .. '_state.t7') then 
+            torch.save(save_path .. '_state.t7', data.dis)
+            print('[Snapshot]: saved model @ ' .. save_path)
+        end
     end
 end
 

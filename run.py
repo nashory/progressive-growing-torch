@@ -7,7 +7,7 @@ import argparse
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--type', default='pggan', help='Progressive-growing GAN')
-parser.add_argument('--multi', default=True, help='true: if you want to prevent memory allocation across all GPUs')
+parser.add_argument('--multi', default=False, help='true: if you want to prevent memory allocation across all GPUs')
 args = parser.parse_args()
 params = vars(args)
 print json.dumps(params, indent = 4)

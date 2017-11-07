@@ -79,11 +79,14 @@ function network.flush_FadeInBlock(gen, dis, resl, targ)
         if targ == 'gen' then
             local high_resl_block = gen.modules[#gen.modules].modules[1].modules[2]:clone()
             gen:remove()
+            network.freeze_layers(gen)              -- freeze the pretrained blocks.
             gen:add(high_resl_block.modules[1]:clone())
             gen:add(high_resl_block.modules[2]:clone())
+            
         elseif targ == 'dis' then
             local high_resl_block = dis.modules[1].modules[1].modules[2]:clone()
             dis:remove(1)
+            network.freeze_layers(dis)              -- freeze the pretrained blocks.
             dis:insert(high_resl_block.modules[2]:clone(), 1)
             dis:insert(high_resl_block.modules[1]:clone(), 1)
         end
@@ -91,6 +94,12 @@ function network.flush_FadeInBlock(gen, dis, resl, targ)
     return gen, dis
 end
 
+function network.freeze_layers(model)
+    for i = 1, #model.modules do
+        model.modules[i].parameters = function() return nil end     -- freezes the layer when using optim 
+        model.modules[i].accGradParameters = function() end         -- overwrite this to reduce computations
+    end
+end
 
 -- return initial structure of generator.
 function network.get_init_gen(g_config)
