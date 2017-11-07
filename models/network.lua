@@ -63,7 +63,7 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
                 :add(nn.Sequential():add(nn.SpatialAveragePooling(2,2,2,2)):add(prev_block))
                 :add(nn.Sequential():add(from_rgb_block):add(inter_block)))
     fadein:add(nn.FadeInLayer(transition_tick))
-    dis:insert(fadein,1)            -- insert modeul in front
+    dis:insert(fadein,1)            -- insert module in front
     fadein = nil
 
     return gen, dis

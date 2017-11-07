@@ -102,7 +102,7 @@ function PGGAN:resl_scheduler()
 
     -- transition/training tick schedule.
     if math.floor(self.resl)==2 then
-        self.training_tick = 200
+        self.training_tick = 100
         self.transition_tick = 100
     else
         self.training_tick = self.opt.training_tick
