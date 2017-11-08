@@ -103,14 +103,14 @@ function PGGAN:resl_scheduler()
     -- transition/training tick schedule.
     if math.floor(self.resl)==2 then
         self.training_tick = 100
-        self.transition_tick = 100
+        self.transition_tick = 50
     else
         self.training_tick = self.opt.training_tick
         self.transition_tick = self.opt.transition_tick
     end
     local delta = 1.0/(self.training_tick + 2*self.transition_tick)
     local d_alpha = 1.0*self.batchSize/self.transition_tick/TICK
-    
+   
     -- update alpha if fade-in layer exist.
     if self.fadein.gen ~= nil and self.resl%1.0 <= (self.transition_tick)*delta then
         self.fadein.gen:updateAlpha(d_alpha)
@@ -164,6 +164,10 @@ function PGGAN:resl_scheduler()
                                  self.config.G, self.config.D, true)
             self:renew_loader()
             self:renew_parameters()
+            -- reduce learning rate. (the authors did not use lr policy, but I will try.)
+            --optimizer.dis.config.lr = optimizer.dis.config.lr*0.8
+            --optimizer.gen.config.lr = optimizer.gen.config.lr*0.8
+
             -- find fadein layer.  
             local fadein_nodes = self.gen:findModules('nn.FadeInLayer')
             if #fadein_nodes~=0 then self.fadein.gen = fadein_nodes[1] end
@@ -198,10 +202,11 @@ PGGAN['fDx'] = function(self, x)
     self.x = self:feed_interpolated_input(self.data:clone())
     self.label:fill(1)          -- real label (1)
     local fx = self.dis:forward(self.x:cuda())
-    local d_errD_drift = -1*self.opt.epsilon_drift*(self.param_dis:clone():pow(2):sum()/self.param_dis:size(1))  -- get drift loss.
+    --local d_errD_drift = -1*self.opt.epsilon_drift*(self.param_dis:clone():pow(2):sum()/self.param_dis:size(1))  -- get drift loss.
     local errD_real = self.crit_adv:forward(fx:cuda(), self.label:cuda())
     local d_errD_real = self.crit_adv:backward(fx:cuda(), self.label:cuda())
-    local d_fx = self.dis:backward(self.x:cuda(), torch.add(d_errD_real, d_errD_drift):cuda())
+    --local d_fx = self.dis:backward(self.x:cuda(), torch.add(d_errD_real, d_errD_drift):cuda())
+    local d_fx = self.dis:backward(self.x:cuda(), d_errD_real:cuda())
 
     -- train with fake(x_tilde)
     self.label:fill(0)          -- fake label (0)
@@ -210,7 +215,8 @@ PGGAN['fDx'] = function(self, x)
     self.fx_tilde = self.dis:forward(self.x_tilde:cuda())
     local errD_fake = self.crit_adv:forward(self.fx_tilde:cuda(), self.label:cuda())
     local d_errD_fake = self.crit_adv:backward(self.fx_tilde:cuda(), self.label:cuda())
-    local d_fx_tilde = self.dis:backward(self.x_tilde:cuda(), torch.add(d_errD_fake, d_errD_drift):cuda())
+    --local d_fx_tilde = self.dis:backward(self.x_tilde:cuda(), torch.add(d_errD_fake, d_errD_drift):cuda())
+    local d_fx_tilde = self.dis:backward(self.x_tilde:cuda(), d_errD_fake:cuda())
    
     -- return error.
     local errD = {  ['real'] = errD_real,
@@ -329,9 +335,9 @@ function PGGAN:train(loader)
         self:snapshot(string.format('repo/%s', self.opt.name), self.opt.name, data)
 
         -- logging
-        local log_msg = string.format('[E:%d][T:%d][%6d/%6d]    errD(real): %.4f | errD(fake): %.4f | errG: %.4f    [Res:%4d][Trn(G):%.1f%%][Trn(D):%.1f%%][Elp(hr):%.4f]',
+        local log_msg = string.format('[E:%d][T:%d][%6d/%6d]  errD(real): %.4f | errD(fake): %.4f | errG: %.4f  [lr:%.3fe-3][Res:%4d][Trn(G):%.1f%%][Trn(D):%.1f%%][Elp(hr):%.4f]',
                                         epoch, self.globalTick, stacked, self.loader:size(), 
-                                        errD.real, errD.fake, errG, math.pow(2,math.floor(self.resl)), 
+                                        errD.real, errD.fake, errG, optimizer.gen.config.lr*1000, math.pow(2,math.floor(self.resl)), 
                                         self.complete.gen, self.complete.dis, tm:time().real/3600.0)
         print(log_msg)
         logger:setNames{'epoch', 'ticks', 'ErrD', 'ErrG', 'Res', 'Trn(G)', 'Trn(D)', 'Elp'}
