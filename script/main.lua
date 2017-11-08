@@ -37,10 +37,10 @@ g_config = {
             ['transition_tick']=opt.transition_tick,
             ['nz']=512,
             ['normalize_latents']=true,
-            ['use_wscale']=true,
+            ['use_weightnorm']=false,
             ['use_pixelwise']=true,
             ['use_leakyrelu']=true,
-            ['use_batchnorm']=false,
+            ['use_batchnorm']=true,
             ['use_tanh']=false,
             }
 d_config = {
@@ -53,10 +53,10 @@ d_config = {
             ['use_wscale']=true,
             ['fmap_gdrop']=true,
             ['normalize_latents']=true,
-            ['use_wscale']=true,
+            ['use_weightnorm']=false,
             ['use_pixelwise']=true,
             ['use_leakyrelu']=true,
-            ['use_batchnorm']=false,
+            ['use_batchnorm']=true,
 }
 
 config = {

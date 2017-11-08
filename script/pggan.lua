@@ -102,8 +102,8 @@ function PGGAN:resl_scheduler()
 
     -- transition/training tick schedule.
     if math.floor(self.resl)==2 then
-        self.training_tick = 100
-        self.transition_tick = 50
+        self.training_tick = 200
+        self.transition_tick = 100
     else
         self.training_tick = self.opt.training_tick
         self.transition_tick = self.opt.transition_tick
@@ -202,11 +202,11 @@ PGGAN['fDx'] = function(self, x)
     self.x = self:feed_interpolated_input(self.data:clone())
     self.label:fill(1)          -- real label (1)
     local fx = self.dis:forward(self.x:cuda())
-    --local d_errD_drift = -1*self.opt.epsilon_drift*(self.param_dis:clone():pow(2):sum()/self.param_dis:size(1))  -- get drift loss.
+    local d_errD_drift = -1*self.opt.epsilon_drift*(self.param_dis:clone():pow(2):sum()/self.param_dis:size(1))  -- get drift loss.
     local errD_real = self.crit_adv:forward(fx:cuda(), self.label:cuda())
     local d_errD_real = self.crit_adv:backward(fx:cuda(), self.label:cuda())
-    --local d_fx = self.dis:backward(self.x:cuda(), torch.add(d_errD_real, d_errD_drift):cuda())
-    local d_fx = self.dis:backward(self.x:cuda(), d_errD_real:cuda())
+    local d_fx = self.dis:backward(self.x:cuda(), torch.add(d_errD_real, d_errD_drift):cuda())
+    --local d_fx = self.dis:backward(self.x:cuda(), d_errD_real:cuda())
 
     -- train with fake(x_tilde)
     self.label:fill(0)          -- fake label (0)
@@ -215,8 +215,8 @@ PGGAN['fDx'] = function(self, x)
     self.fx_tilde = self.dis:forward(self.x_tilde:cuda())
     local errD_fake = self.crit_adv:forward(self.fx_tilde:cuda(), self.label:cuda())
     local d_errD_fake = self.crit_adv:backward(self.fx_tilde:cuda(), self.label:cuda())
-    --local d_fx_tilde = self.dis:backward(self.x_tilde:cuda(), torch.add(d_errD_fake, d_errD_drift):cuda())
-    local d_fx_tilde = self.dis:backward(self.x_tilde:cuda(), d_errD_fake:cuda())
+    local d_fx_tilde = self.dis:backward(self.x_tilde:cuda(), torch.add(d_errD_fake, d_errD_drift):cuda())
+    --local d_fx_tilde = self.dis:backward(self.x_tilde:cuda(), d_errD_fake:cuda())
    
     -- return error.
     local errD = {  ['real'] = errD_real,
