@@ -1,6 +1,6 @@
 # Progressive Growing of GANs for Improved Quality, Stability, and Variation
   
-Torch implementation of [PROGRESSIVE GROWING OF GANS FOR IMPROVED QUALITY, STABILITY, AND VARIATION](http://research.nvidia.com/sites/default/files/pubs/2017-10_Progressive-Growing-of//karras2017gan-paper.pdf)
+Torch implementation of [PROGRESSIVE GROWING OF GANS FOR IMPROVED QUALITY, STABILITY, AND VARIATION](http://research.nvidia.com/sites/default/files/pubs/2017-10_Progressive-Growing-of//karras2017gan-paper.pdf)   
 __YOUR CONTRIBUTION IS INVALUABLE FOR THIS PROJECT :)__ 
 
 ![image](https://puu.sh/ydG0E/e0f32b0d92.png)
@@ -47,8 +47,10 @@ __[step 3.] Visualization__
   `$ <server_ip>:<port> at your browser`
 
 ## Experimental results
-results so far (just started training. I will keep updating the result.)  
-![image](https://puu.sh/ydFYx/46cb67da75.png)
+![image](https://puu.sh/ydFYx/46cb67da75.png)  
+
+### Transition experiment: (having trouble with transition from 8x8 -> 16x16 yet.)
+<img src="https://github.com/nashory/gifs/blob/progressive/resl_4.gif?raw=true" width="430" height="430"> <img src="https://github.com/nashory/gifs/blob/progressive/resl_4to8.gif?raw=true" width="430" height="430">
 
 ## What does the printed log mean?
 ~~~
