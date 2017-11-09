@@ -65,13 +65,13 @@ function Generator.intermediate_block(resl, g_config)
         inter_block:add(SFullConv(ndim*2, ndim, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
         if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
         inter_block:add(SFullConv(ndim, ndim, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
-        if flag_bn then inter_block:add(SBatchNorm(ndim))
+        if flag_bn then inter_block:add(SBatchNorm(ndim)) end
         if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
     else 
         inter_block:add(SFullConv(ndim, ndim, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
         if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
         inter_block:add(SFullConv(ndim, ndim, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
-        if flag_bn then inter_block:add(SBatchNorm(ndim))
+        if flag_bn then inter_block:add(SBatchNorm(ndim)) end
         if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
     end
     

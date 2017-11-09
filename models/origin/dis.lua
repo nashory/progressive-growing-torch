@@ -69,7 +69,7 @@ function Discrim.intermediate_block(resl, d_config)
         if flag_pixel then inter_block:add(LRN(1)) end
         if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
         inter_block:add(SConv(ndim, ndim*2, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})) 
-        if flag_bn then inter_block:add(SBatchNorm(ndim))
+        if flag_bn then inter_block:add(SBatchNorm(ndim)) end
         if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
         inter_block:add(AvgPool(2,2,2,2))                   -- downsample by factor of 2.0
     else 
@@ -77,7 +77,7 @@ function Discrim.intermediate_block(resl, d_config)
         if flag_pixel then inter_block:add(LRN(1)) end
         if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
         inter_block:add(SConv(ndim, ndim, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
-        if flag_bn then inter_block:add(SBatchNorm(ndim))
+        if flag_bn then inter_block:add(SBatchNorm(ndim)) end
         if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
         inter_block:add(AvgPool(2,2,2,2))                   -- downsample by factor of 2.0
     end
