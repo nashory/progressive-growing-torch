@@ -10,7 +10,14 @@ function PixelWiseNorm:__init()
 end
 function PixelWiseNorm:updateOutput(input)
     local ndim = input:size(2)          -- batch x ndim x height x width
-    self.output = input:div(torch.sqrt(input:pow(2):sum()/ndim + self.elipson))
+    local height = input:size(3)
+    local norm = torch.sqrt(input:clone():pow(2):mean(2):permute(2,1,3,4))
+    self.output = input:cdiv(torch.repeatTensor(norm, ndim, 1, 1, 1):permute(2,1,3,4):add(self.elipson))
+    --local norm = torch.sqrt(input:pow(2):sum(3):sum(4)):squeeze():add(self.elipson)
+    --self.output = input:cdiv(torch.repeatTensor(norm, height, height,1,1):permute(3,4,1,2))
+    
+    --local norm = torch.sqrt(input:pow(2):sum(2):div(ndim):add(self.elipson)):squeeze()
+    --self.output = input:cdiv(torch.repeatTensor(norm, ndim,1,1,1):permute(2,1,3,4))
     return self.output
 end
 function PixelWiseNorm:updateGradInput(input, gradOutput)

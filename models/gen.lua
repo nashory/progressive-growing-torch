@@ -30,15 +30,17 @@ function Generator.input_block(g_config)
     local input_block = nn.Sequential()
     if flag_wn then input_block:add(WN(SFullConv(nz, ngf, 4, 4):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})))
     else input_block:add(SFullConv(nz, ngf, 4, 4):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})) end
-    if flag_lrelu then input_block:add(nn.LeakyReLU(0.2,true)) else input_block:add(nn.ReLU(true)) end
     --if flag_bn then input_block:add(SBatchNorm(ngf)) end
-    if flag_pixel then input_block:add(LRN(1)) end
+    --if flag_pixel then input_block:add(LRN(2)) end
+    if flag_pixel then input_block:add(PixelWise()) end
+    if flag_lrelu then input_block:add(nn.LeakyReLU(0.2,true)) else input_block:add(nn.ReLU(true)) end
     
     if flag_wn then input_block:add(WN(SFullConv(nz, ngf, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})))
     else input_block:add(SFullConv(nz, ngf, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})) end
+    --if flag_bn then input_block:add(SBatchNorm(ngf)) end
+    --if flag_pixel then input_block:add(LRN(2)) end
+    if flag_pixel then input_block:add(PixelWise()) end
     if flag_lrelu then input_block:add(nn.LeakyReLU(0.2,true)) else input_block:add(nn.ReLU(true)) end
-    if flag_bn then input_block:add(SBatchNorm(ngf)) end
-    --if flag_pixel then input_block:add(LRN(1)) end
     
     local ndim  = ngf
     return input_block, ndim
@@ -75,28 +77,32 @@ function Generator.intermediate_block(resl, g_config)
     if halving then
         if flag_wn then inter_block:add(WN(SFullConv(ndim*2, ndim, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})))
         else inter_block:add(SFullConv(ndim*2, ndim, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})) end
-        if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
         --if flag_bn then inter_block:add(SBatchNorm(ndim)) end
-        if flag_pixel then inter_block:add(LRN(1)) end
+        --if flag_pixel then inter_block:add(LRN(2)) end
+        if flag_pixel then inter_block:add(PixelWise()) end
+        if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
 
         if flag_wn then inter_block:add(WN(SFullConv(ndim, ndim, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})))
         else inter_block:add(SFullConv(ndim, ndim, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})) end
+        --if flag_bn then inter_block:add(SBatchNorm(ndim)) end
+        --if flag_pixel then inter_block:add(LRN(2)) end
+        if flag_pixel then inter_block:add(PixelWise()) end
         if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
-        --if flag_pixel then inter_block:add(LRN(1)) end
-        if flag_bn then inter_block:add(SBatchNorm(ndim)) end
     
     else 
         if flag_wn then inter_block:add(WN(SFullConv(ndim, ndim, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})))
         else inter_block:add(SFullConv(ndim, ndim, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})) end
-        if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
         --if flag_bn then inter_block:add(SBatchNorm(ndim)) end
-        if flag_pixel then inter_block:add(LRN(1)) end
+        --if flag_pixel then inter_block:add(LRN(2)) end
+        if flag_pixel then inter_block:add(PixelWise()) end
+        if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
 
         if flag_wn then inter_block:add(WN(SFullConv(ndim, ndim, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})))
         else inter_block:add(SFullConv(ndim, ndim, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})) end
+        --if flag_bn then inter_block:add(SBatchNorm(ndim)) end
+        --if flag_pixel then inter_block:add(LRN(2)) end
+        if flag_pixel then inter_block:add(PixelWise()) end
         if flag_lrelu then inter_block:add(nn.LeakyReLU(0.2,true)) else inter_block:add(nn.ReLU(true)) end
-        if flag_bn then inter_block:add(SBatchNorm(ndim)) end
-        --if flag_pixel then inter_block:add(LRN(1)) end
     end
     
     return inter_block, ndim
@@ -113,8 +119,9 @@ function Generator.to_rgb_block(ndim, g_config)
     local to_rgb_block = nn.Sequential()
     if flag_wn then to_rgb_block:add(WN(SFullConv(ndim, nc, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})))
     else to_rgb_block:add(SFullConv(ndim, nc, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})) end
-    if flag_lrelu then to_rgb_block:add(nn.LeakyReLU(0.2,true)) else to_rgb_block:add(nn.ReLU(true)) end
-    if flag_pixel then to_rgb_block:add(LRN(1)) end
+    --if flag_pixel then to_rgb_block:add(LRN(1)) end
+    --if flag_pixel then to_rgb_block:add(PixelWise()) end
+    --if flag_lrelu then to_rgb_block:add(nn.LeakyReLU(0.2,true)) else to_rgb_block:add(nn.ReLU(true)) end
     if flag_tanh then to_rgb_block:add(nn.Tanh()) end 
     return to_rgb_block
 end
