@@ -30,7 +30,7 @@ function M.parse(arg)
 	cmd:option('-display_id', 10, 'display window id.')
 	cmd:option('-display_iter', 5, '# of iterations after which display is updated.')
 	cmd:option('-display_server_ip', '10.108.23.11', 'host server ip address.')
-	cmd:option('-display_server_port', 11200, 'host server port.')
+	cmd:option('-display_server_port', 11202, 'host server port.')
 	cmd:option('-save_jpg_iter', 6, 'save every X-th displayed image.')
 	cmd:option('-sever_name', 'progressive-growing-gan', 'server name.')
 
