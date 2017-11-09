@@ -5,6 +5,11 @@ __YOUR CONTRIBUTION IS INVALUABLE FOR THIS PROJECT :)__
 
 ![image](https://puu.sh/ydG0E/e0f32b0d92.png)
 
+## NEED HELP
+
+[ ] (1) Implementing Pixel-wise normalization layer  
+[ ] (2) Implementing pre-layer normalization (for equalized learning rate)    
+__(I have tried both, but failed to converge. Anyone can help implementing those two custom layers?)__
 
 ## Prerequisites
 + [Torch7](http://torch.ch/docs/getting-started.html#_)
