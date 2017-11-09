@@ -8,8 +8,8 @@ require 'cudnn'
 require 'cutorch'
 require 'math'
 require 'models.custom_layer'
-local G = require 'models.gen'
-local D = require 'models.dis'
+local G = require 'models.origin.gen'
+local D = require 'models.origin.dis'
 
 
 local network = {}
@@ -37,7 +37,8 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
                                                                             math.pow(2,resl-1), math.pow(2,resl)))
     local transition_tick = g_config['transition_tick']                                                                        
     prev_block = gen.modules[#gen.modules]:clone()
-    gen:remove()                            -- remove the last layer
+    gen:remove()                            -- remove the last layer, and
+    network.freeze_layers(gen)              -- freeze the pretrained blocks.
     
     -- now, make residual block and add fade-in layer.
     local inter_block, ndim = G.intermediate_block(resl, g_config)
@@ -55,7 +56,8 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
     print(string.format('[From:%d, To:%d] Growing networks ... It might take few seconds... [Discriminator]',
                                                                             math.pow(2,resl-1), math.pow(2,resl)))
     prev_block = dis.modules[1]:clone()
-    dis:remove(1)                           -- remove the first layer
+    dis:remove(1)                           -- remove the first layer, and
+    network.freeze_layers(dis)              -- freeze the pretrained blocks.
     
     -- now, make residual block and add fade-in layer.
     local inter_block, ndim = D.intermediate_block(resl, d_config)
@@ -81,14 +83,12 @@ function network.flush_FadeInBlock(gen, dis, resl, targ)
         if targ == 'gen' then
             local high_resl_block = gen.modules[#gen.modules].modules[1].modules[2]:clone()
             gen:remove()
-            network.freeze_layers(gen)              -- freeze the pretrained blocks.
             gen:add(high_resl_block.modules[1]:clone())
             gen:add(high_resl_block.modules[2]:clone())
             
         elseif targ == 'dis' then
             local high_resl_block = dis.modules[1].modules[1].modules[2]:clone()
             dis:remove(1)
-            network.freeze_layers(dis)              -- freeze the pretrained blocks.
             dis:insert(high_resl_block.modules[2]:clone(), 1)
             dis:insert(high_resl_block.modules[1]:clone(), 1)
         end

@@ -29,8 +29,6 @@ end
 -- generator / discriminator parameter setting.
 g_config = {
             ['num_channels']=3,
-            ['resolution']=32,
-            ['label_size']=0,
             ['fmap_base']=4096,
             ['fmap_decay']=1.0,
             ['fmap_max']=512,
@@ -41,12 +39,11 @@ g_config = {
             ['use_pixelwise']=true,
             ['use_leakyrelu']=true,
             ['use_batchnorm']=true,
-            ['use_tanh']=false,
+            ['use_tanh']=true,
             }
 d_config = {
             ['num_channels']=3,
             ['resolution']=32,
-            ['label_size']=0,
             ['fmap_base']=4096,
             ['fmap_decay']=1.0,
             ['fmap_max']=512,
@@ -73,11 +70,14 @@ print(gan_gen)
 print ('Discriminator structure: ')    
 print(gan_dis)
 
+
+
 gan_models = {gan_gen, gan_dis}
 
 
 -- loss metrics
 local gan_criterion = {nn.MSECriterion()}
+
 
 -- run trainer
 require 'script.pggan'

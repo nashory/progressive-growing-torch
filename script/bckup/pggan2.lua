@@ -75,10 +75,9 @@ function PGGAN:__init(model, criterion, opt, optimstate, config)
     self.crit_adv = criterion[1]:cuda()
 end
 
-
 function PGGAN:feed_interpolated_input(src)
     local x = src
-    if self.state == 'gtrns' and math.floor(self.resl) >2 then
+    if self.state == 'trns' and math.floor(self.resl) >2 then
         local x_intp = torch.Tensor(x:size()):zero()
         for i = 1, x_intp:size(1) do
             local x_up = x[{{i},{},{},{}}]:squeeze()
@@ -89,40 +88,36 @@ function PGGAN:feed_interpolated_input(src)
     else
         return x
     end
+
 end
 
 
 -- this function will schedule image resolution factor(resl) progressively.
 -- should be called every iteration to ensure kimgs is counted properly.
--- step 1. (transition_tick) --> transition in generator.
--- step 2. (transition_tick) --> transition in discriminator.
--- step 3. (training_tick) --> stabilize.
--- total period: (training_tick + 2*transition_tick)
+-- step 1. (transition_tick) --> transition in both generator and discriminator.
+-- step 2. (training_tick) --> stabilize.
+-- total period: (training_tick + transition_tick)
 function PGGAN:resl_scheduler()
 
     -- transition/training tick schedule.
     if math.floor(self.resl)==2 then
-        self.training_tick = 40
-        self.transition_tick = 20
+        self.training_tick = 100
+        self.transition_tick = 100
     else
         self.training_tick = self.opt.training_tick
         self.transition_tick = self.opt.transition_tick
     end
-    local delta = 1.0/(self.training_tick + 2*self.transition_tick)
+    local delta = 1.0/(self.training_tick + self.transition_tick)
     local d_alpha = 1.0*self.batchSize/self.transition_tick/TICK
    
     -- update alpha if fade-in layer exist.
     if self.fadein.gen ~= nil and self.resl%1.0 <= (self.transition_tick)*delta then
         self.fadein.gen:updateAlpha(d_alpha)
-        self.complete.gen = self.fadein.gen.complete
-        self.state = 'gtrns'
-    end
-    if  self.fadein.dis ~= nil and self.resl%1.0 >= (self.transition_tick)*delta and self.resl%1.0 <= (self.transition_tick*2)*delta then
         self.fadein.dis:updateAlpha(d_alpha)
+        self.complete.gen = self.fadein.gen.complete
         self.complete.dis = self.fadein.dis.complete
-        self.state = 'dtrns'
+        self.state = 'trns'
     end
-
 
     self.batchSize = self.batch_table[math.pow(2,math.floor(self.resl))]
     local prev_kimgs = self.kimgs
@@ -136,22 +131,20 @@ function PGGAN:resl_scheduler()
         self.resl = math.max(2, math.min(10.5, self.resl))
 
         -- flush network.
-        if self.flag_flush_gen and self.resl%1.0 >= (self.transition_tick)*delta then
+        if self.flag_flush_gen and self.flag_flush_dis and self.resl%1.0 >= (self.transition_tick)*delta then
             if self.fadein.gen ~= nil then
                 self.fadein.gen:updateAlpha(d_alpha)
                 self.complete.gen = self.fadein.gen.complete
             end
-            self.flag_flush_gen = false
-            network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl), 'gen')
-            self.fadein.gen = nil
-            self.state = 'dtrns'
-        elseif self.flag_flush_dis and self.resl%1.0 >= (self.transition_tick*2)*delta then
             if self.fadein.dis ~= nil then
                 self.fadein.dis:updateAlpha(d_alpha)
                 self.complete.dis = self.fadein.dis.complete
             end
+            self.flag_flush_gen = false
             self.flag_flush_dis = false
-            network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl), 'dis') 
+            network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl), 'gen')
+            network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl), 'dis')
+            self.fadein.gen = nil
             self.fadein.dis = nil
             self.state = 'stab'
         end
@@ -175,7 +168,7 @@ function PGGAN:resl_scheduler()
             local fadein_nodes = self.dis:findModules('nn.FadeInLayer')
             if #fadein_nodes~=0 then self.fadein.dis = fadein_nodes[1] end
             self.complete.dis = self.fadein.dis.complete
-            self.state = 'gtrns'
+            self.state = 'trns'
         end
         if math.ceil(self.resl)>=11 and self.flag_flush then
             self.flag_flush_gen = false
@@ -284,10 +277,6 @@ function PGGAN:train(loader)
 
         -- scheduling resolition transition
         self:resl_scheduler()
-
-        -- weight scaling (for equalized learning rate)
-        --network.wscale(self.dis)
-        --network.wscale(self.gen)
         
         -- forward / backward
         local errD = self:fDx()
