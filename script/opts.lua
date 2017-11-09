@@ -24,7 +24,7 @@ function M.parse(arg)
 
 
 	---------------- Data loading options ---------------
-	cmd:option('-data_root_train', '/home1/irteam/nashory/data/CelebA/Img')
+	cmd:option('-data_root_train', '/home1/work/nashory/data/CelebA/Img')
 	cmd:option('-nthreads', 8, '# of workers to use for data loading.')
 	cmd:option('-display', true, 'true : display server on / false : display server off')
 	cmd:option('-display_id', 10, 'display window id.')

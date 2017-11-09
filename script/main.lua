@@ -39,7 +39,7 @@ g_config = {
             ['use_pixelwise']=true,
             ['use_leakyrelu']=true,
             ['use_batchnorm']=true,
-            ['use_tanh']=false,
+            ['use_tanh']=true,
             }
 d_config = {
             ['num_channels']=3,
