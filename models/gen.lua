@@ -34,7 +34,7 @@ function Generator.input_block(g_config)
     --if flag_bn then input_block:add(SBatchNorm(ngf)) end
     if flag_pixel then input_block:add(LRN(1)) end
     
-    if flag_wn then input_block:add(WN(SFullConv(nz, ngf, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})))
+    if flag_wn then input_block:add(WN(SFullConv(ngf, ngf, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})))
     else input_block:add(SFullConv(nz, ngf, 3, 3, 1, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})) end
     if flag_lrelu then input_block:add(nn.LeakyReLU(0.2,true)) else input_block:add(nn.ReLU(true)) end
     if flag_bn then input_block:add(SBatchNorm(ngf)) end
