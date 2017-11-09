@@ -8,8 +8,8 @@ require 'cudnn'
 require 'cutorch'
 require 'math'
 require 'models.custom_layer'
-local G = require 'models.gen'
-local D = require 'models.dis'
+local G = require 'models.struct1.gen'
+local D = require 'models.struct1.dis'
 
 
 local network = {}

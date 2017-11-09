@@ -37,7 +37,7 @@ function M.parse(arg)
 
 	-------------- Training options---------------
 	cmd:option('-lr', 0.0002, 'learning rate')         --0.0002
-	cmd:option('-noisetype', 'uniform', 'uniform/normal distribution noise.')
+	cmd:option('-noisetype', 'normal', 'uniform/normal distribution noise.')
 
 	-- ndims of output features
 	cmd:option('-ngf', 512, 'output dimension of first conv layer of generator.')
