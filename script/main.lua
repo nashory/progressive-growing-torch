@@ -80,7 +80,7 @@ local gan_criterion = {nn.MSECriterion()}
 
 
 -- run trainer
-require 'script.pggan2'
+require 'script.pggan'
 local optimstate = {}
 local gan_trainer = PGGAN(gan_models, gan_criterion, opt, optimstate, config)
 gan_trainer:train(myloader)
