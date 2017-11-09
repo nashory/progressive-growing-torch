@@ -41,7 +41,7 @@ function Discrim.output_block(d_config)
 
     -- conv3 (1x1)
     if flag_wn then output_block:add(WN(SConv(ndf, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})))
-    else output_block:add(SConv(ndf, ndf, 4, 4):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})) end
+    else output_block:add(SConv(ndf, 1, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}})) end
     if flag_lrelu then output_block:add(nn.LeakyReLU(0.2,true)) else output_block:add(nn.ReLU(true)) end
     output_block:add(nn.View(1))          -- batchsize x 1
     output_block:add(nn.Sigmoid())
