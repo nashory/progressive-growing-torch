@@ -98,7 +98,7 @@ function Generator.to_rgb_block(ndim, g_config)
     local to_rgb_block = nn.Sequential()
     to_rgb_block:add(SFullConv(ndim, nc, 1, 1):init('weight', nninit.kaiming, {gain = {'lrelu', leakiness = 0.2}}))
     --if flag_pixel then to_rgb_block:add(LRN(4)) end
-    if flag_tanh then to_rgb_block:add(nn.Tanh()) end 
+    --if flag_tanh then to_rgb_block:add(nn.Tanh()) end 
     return to_rgb_block
 end
 
