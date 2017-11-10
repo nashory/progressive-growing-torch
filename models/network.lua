@@ -98,8 +98,10 @@ end
 
 function network.freeze_layers(model)
     for i = 1, #model.modules do
-        model.modules[i].parameters = function() return nil end     -- freezes the layer when using optim 
-        model.modules[i].accGradParameters = function() end         -- overwrite this to reduce computations
+        for j = 1, #model.modules[i] do
+            model.modules[i].modules[j].accGradParameters = function() end
+            model.modules[i].modules[j].updateParameters = function() end
+        end
     end
 end
 
@@ -119,26 +121,6 @@ function network.get_init_dis(d_config)
     model:add(D.from_rgb_block(ndim, d_config))
     model:add(output_block)
     return model
-end
-
--- apply equalized learning reate (dynamic weight scaling)
-function network.wscale(model)
-    function wscale(weight)
-        local res = weight:div(torch.sqrt(weight:pow(2):sum()))
-        return res
-    end
-    local nodes = nil
-    nodes = model:findModules('nn.SpatialFullConvolution')
-    for i=1, #nodes do
-        print('----')
-        print(nodes[i].weight:mean())
-        nodes[i].weight = wscale(nodes[i].weight:clone())
-        print(nodes[i].weight:mean())
-    end
-    --for i=1, #nodes do nodes[i].weight:div(torch.sqrt(nodes[i].weight:pow(2):mean())) end
-    nodes = model:findModules('nn.SpatialConvolution')
-    for i=1, #nodes do nodes[i].weight = wscale(nodes[i].weight:clone()) end
-    --for i=1, #nodes do nodes[i].weight:div(torch.sqrt(nodes[i].weight:pow(2):mean())) end
 end
 
 

@@ -36,10 +36,10 @@ g_config = {
             ['nz']=512,
             ['normalize_latents']=true,
             ['use_weightnorm']=true,
-            ['use_pixelwise']=false,
+            ['use_pixelwise']=true,
             ['use_leakyrelu']=true,
             ['use_batchnorm']=true,
-            ['use_tanh']=false,
+            ['use_tanh']=true,
             }
 d_config = {
             ['num_channels']=3,
@@ -51,7 +51,7 @@ d_config = {
             ['fmap_gdrop']=true,
             ['normalize_latents']=true,
             ['use_weightnorm']=true,
-            ['use_pixelwise']=false,
+            ['use_pixelwise']=true,
             ['use_leakyrelu']=true,
             ['use_batchnorm']=true,
 }

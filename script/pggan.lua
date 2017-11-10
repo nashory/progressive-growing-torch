@@ -102,8 +102,8 @@ function PGGAN:resl_scheduler()
 
     -- transition/training tick schedule.
     if math.floor(self.resl)==2 then
-        self.training_tick = 200
-        self.transition_tick = 100
+        self.training_tick = 100
+        self.transition_tick = 50
     else
         self.training_tick = self.opt.training_tick
         self.transition_tick = self.opt.transition_tick
@@ -206,7 +206,6 @@ PGGAN['fDx'] = function(self, x)
     local errD_real = self.crit_adv:forward(fx:cuda(), self.label:cuda())
     local d_errD_real = self.crit_adv:backward(fx:cuda(), self.label:cuda())
     local d_fx = self.dis:backward(self.x:cuda(), torch.add(d_errD_real, d_errD_drift):cuda())
-    --local d_fx = self.dis:backward(self.x:cuda(), d_errD_real:cuda())
 
     -- train with fake(x_tilde)
     self.label:fill(0)          -- fake label (0)
@@ -216,7 +215,6 @@ PGGAN['fDx'] = function(self, x)
     local errD_fake = self.crit_adv:forward(self.fx_tilde:cuda(), self.label:cuda())
     local d_errD_fake = self.crit_adv:backward(self.fx_tilde:cuda(), self.label:cuda())
     local d_fx_tilde = self.dis:backward(self.x_tilde:cuda(), torch.add(d_errD_fake, d_errD_drift):cuda())
-    --local d_fx_tilde = self.dis:backward(self.x_tilde:cuda(), d_errD_fake:cuda())
    
     -- return error.
     local errD = {  ['real'] = errD_real,
@@ -243,6 +241,7 @@ function PGGAN:renew_parameters()
     optimizer.dis.optimstate = {}
     self.param_gen, self.gradParam_gen = self.gen:getParameters()
     self.param_dis, self.gradParam_dis = self.dis:getParameters()
+    self.test_param, self.tt = self.gen.modules[1]:parameters()
 end
 
 function PGGAN:renew_loader()
@@ -285,13 +284,10 @@ function PGGAN:train(loader)
         -- scheduling resolition transition
         self:resl_scheduler()
 
-        -- weight scaling (for equalized learning rate)
-        --network.wscale(self.dis)
-        --network.wscale(self.gen)
-        
         -- forward / backward
         local errD = self:fDx()
         local errG = self:fGx()
+
            
         -- weight update.
         optimizer.dis.method(self.param_dis, self.gradParam_dis, optimizer.dis.config.lr,

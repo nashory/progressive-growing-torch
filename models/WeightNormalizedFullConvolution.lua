@@ -4,6 +4,10 @@ local WNFC, parent = torch.class('nn.WeightNormalizedFullConvolution', 'nn.Modul
 
 function WNFC:__init(nInput, nOutput, kw, kh, dw, dh, pw, ph, hasScale, hasBias)
 	parent.__init(self)
+    dw = dw or 1
+    dh = dh or 1
+    pw = pw or 0
+    ph = ph or 0
 	self.conv = nn.SpatialFullConvolution(nInput, nOutput, kw, kh, dw, dh, pw, ph):noBias()
 	self.weightNormFactor = math.sqrt(dw * dh)
 	if hasScale == nil then
