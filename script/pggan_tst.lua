@@ -95,8 +95,8 @@ end
 -- this function will schedule image resolution factor(resl) progressively.
 -- should be called every iteration to ensure kimgs is counted properly.
 -- step 1. (transition_tick) --> transition in generator.
--- step 2. (transition_tick) --> transition in discriminator.
--- step 3. (training_tick) --> stabilize.
+-- step 2. (training_tick) --> stabilize.
+-- step 3. (transition_tick) --> transition in discriminator.
 -- total period: (training_tick + 2*transition_tick)
 function PGGAN:resl_scheduler()
 
@@ -117,7 +117,7 @@ function PGGAN:resl_scheduler()
         self.complete.gen = self.fadein.gen.complete
         self.state = 'gtrns'
     end
-    if  self.fadein.dis ~= nil and self.resl%1.0 >= (self.transition_tick)*delta and self.resl%1.0 <= (self.transition_tick*2)*delta then
+    if  self.fadein.dis ~= nil and self.resl%1.0 >= (self.transition_tick+self.training_tick)*delta then
         self.fadein.dis:updateAlpha(d_alpha)
         self.complete.dis = self.fadein.dis.complete
         self.state = 'dtrns'
@@ -136,7 +136,7 @@ function PGGAN:resl_scheduler()
         self.resl = math.max(2, math.min(10.5, self.resl))
 
         -- flush network.
-        if self.flag_flush_gen and self.resl%1.0 >= (self.transition_tick)*delta then
+        if self.flag_flush_gen and self.resl%1.0 >= (self.transition_tick+self.training_tick)*delta and prev_resl~=2 then
             if self.fadein.gen ~= nil then
                 self.fadein.gen:updateAlpha(d_alpha)
                 self.complete.gen = self.fadein.gen.complete
@@ -145,7 +145,7 @@ function PGGAN:resl_scheduler()
             network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl), 'gen')
             self.fadein.gen = nil
             self.state = 'dtrns'
-        elseif self.flag_flush_dis and self.resl%1.0 >= (self.transition_tick*2)*delta then
+        elseif self.flag_flush_dis and math.floor(self.resl) ~= prev_resl and prev_resl~=2 then
             if self.fadein.dis ~= nil then
                 self.fadein.dis:updateAlpha(d_alpha)
                 self.complete.dis = self.fadein.dis.complete
@@ -153,7 +153,7 @@ function PGGAN:resl_scheduler()
             self.flag_flush_dis = false
             network.flush_FadeInBlock(self.gen, self.dis, math.ceil(self.resl), 'dis') 
             self.fadein.dis = nil
-            self.state = 'stab'
+            self.state = 'gtrns'
         end
         -- grow network
         if math.floor(self.resl) ~= prev_resl then

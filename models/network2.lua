@@ -8,8 +8,8 @@ require 'cudnn'
 require 'cutorch'
 require 'math'
 require 'models.custom_layer'
-local G = require 'models.origin.gen'
-local D = require 'models.origin.dis'
+local G = require 'models.began.gen'
+local D = require 'models.began.dis'
 
 
 local network = {}
@@ -38,6 +38,7 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
     local transition_tick = g_config['transition_tick']                                                                        
     prev_block = gen.modules[#gen.modules]:clone()
     gen:remove()                            -- remove the last layer
+    network.freeze_layers(gen)              -- freeze the pretrained blocks.
     
     -- now, make residual block and add fade-in layer.
     local inter_block, ndim = G.intermediate_block(resl, g_config)
@@ -46,7 +47,7 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
     fadein:add( nn.ConcatTable()
                 :add(nn.Sequential():add(nn.SpatialUpSamplingNearest(2.0)):add(prev_block))     -- for low resl
                 :add(nn.Sequential():add(inter_block):add(to_rgb_block)))                       -- for high resl
-    fadein:add(nn.FadeInLayer(transition_tick))
+    fadein:add(nn.FadeInLayer())
     gen:add(fadein)
     fadein = nil
 
@@ -56,6 +57,7 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
                                                                             math.pow(2,resl-1), math.pow(2,resl)))
     prev_block = dis.modules[1]:clone()
     dis:remove(1)                           -- remove the first layer
+    network.freeze_layers(dis)              -- freeze the pretrained blocks.
     
     -- now, make residual block and add fade-in layer.
     local inter_block, ndim = D.intermediate_block(resl, d_config)
@@ -64,7 +66,7 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
     fadein:add( nn.ConcatTable()
                 :add(nn.Sequential():add(nn.SpatialAveragePooling(2,2,2,2)):add(prev_block))
                 :add(nn.Sequential():add(from_rgb_block):add(inter_block)))
-    fadein:add(nn.FadeInLayer(transition_tick))
+    fadein:add(nn.FadeInLayer())
     dis:insert(fadein,1)            -- insert module in front
     fadein = nil
 
@@ -81,14 +83,12 @@ function network.flush_FadeInBlock(gen, dis, resl, targ)
         if targ == 'gen' then
             local high_resl_block = gen.modules[#gen.modules].modules[1].modules[2]:clone()
             gen:remove()
-            network.freeze_layers(gen)              -- freeze the pretrained blocks.
             gen:add(high_resl_block.modules[1]:clone())
             gen:add(high_resl_block.modules[2]:clone())
             
         elseif targ == 'dis' then
             local high_resl_block = dis.modules[1].modules[1].modules[2]:clone()
             dis:remove(1)
-            network.freeze_layers(dis)              -- freeze the pretrained blocks.
             dis:insert(high_resl_block.modules[2]:clone(), 1)
             dis:insert(high_resl_block.modules[1]:clone(), 1)
         end
@@ -98,8 +98,10 @@ end
 
 function network.freeze_layers(model)
     for i = 1, #model.modules do
-        model.modules[i].parameters = function() return nil end     -- freezes the layer when using optim 
-        model.modules[i].accGradParameters = function() end         -- overwrite this to reduce computations
+        for j = 1, #model.modules[i] do
+            model.modules[i].modules[j].accGradParameters = function() end
+            model.modules[i].modules[j].updateParameters = function() end
+        end
     end
 end
 
@@ -119,26 +121,6 @@ function network.get_init_dis(d_config)
     model:add(D.from_rgb_block(ndim, d_config))
     model:add(output_block)
     return model
-end
-
--- apply equalized learning reate (dynamic weight scaling)
-function network.wscale(model)
-    function wscale(weight)
-        local res = weight:div(torch.sqrt(weight:pow(2):sum()))
-        return res
-    end
-    local nodes = nil
-    nodes = model:findModules('nn.SpatialFullConvolution')
-    for i=1, #nodes do
-        print('----')
-        print(nodes[i].weight:mean())
-        nodes[i].weight = wscale(nodes[i].weight:clone())
-        print(nodes[i].weight:mean())
-    end
-    --for i=1, #nodes do nodes[i].weight:div(torch.sqrt(nodes[i].weight:pow(2):mean())) end
-    nodes = model:findModules('nn.SpatialConvolution')
-    for i=1, #nodes do nodes[i].weight = wscale(nodes[i].weight:clone()) end
-    --for i=1, #nodes do nodes[i].weight:div(torch.sqrt(nodes[i].weight:pow(2):mean())) end
 end
 
 
