@@ -48,13 +48,11 @@ end
 
 -- Resolution selector for fading in new layers during progressinve growing.
 local FadeInLayer, parent = torch.class('nn.FadeInLayer', 'nn.Module')
-function FadeInLayer:__init(resl_transition_tick)
+function FadeInLayer:__init()
     parent.__init(self)
-    self.transition_tick = resl_transition_tick
     self.alpha = 0
     self.iter = 0
     self.complete = 0
-    self.accum = 0              -- accumulated processed images.
 end
 -- input[1]: from low resolution / input[2]: from high resolution
 function FadeInLayer:updateOutput(input)
@@ -65,9 +63,6 @@ function FadeInLayer:updateOutput(input)
     return self.output
 end
 function FadeInLayer:updateAlpha(delta)
-    --self.accum = self.accum + batchSize
-    -- linear interpolation
-    --self.alpha = (self.accum) / (self.transition_tick*1000.0)
     self.alpha = self.alpha + delta
     self.alpha = math.max(0, math.min(1, self.alpha))
     self.complete = (self.alpha)*100.0
@@ -78,15 +73,8 @@ function FadeInLayer:updateGradInput(input, gradOutput)
     self.gradInput[1] = input[1]:clone():fill(0)
     self.gradInput[2] = input[2]:clone():fill(0)
 
-    --print('alpha:' .. self.alpha)
-    --print(self.alpha)
-    --print('1-alpha:' .. 1.0-self.alpha)
     self.gradInput[1]:copy(gradOutput:clone():mul(1.0-self.alpha))
     self.gradInput[2]:copy(gradOutput:clone():mul(self.alpha))
-    --print('[1] grad sum:' .. gradOutput:sum())
-    --print('[2] alpha + 1-alpha:' .. gradOutput:clone():mul(1.0-self.alpha):sum() + gradOutput:clone():mul(self.alpha):sum())
-    --self.gradInput[1]:copy(gradOutput)
-    --self.gradInput[2]:copy(gradOutput)
 
     return self.gradInput
 end

@@ -8,8 +8,8 @@ require 'cudnn'
 require 'cutorch'
 require 'math'
 require 'models.custom_layer'
-local G = require 'models.struct1.gen'
-local D = require 'models.struct1.dis'
+local G = require 'models.began.gen'
+local D = require 'models.began.dis'
 
 
 local network = {}
@@ -46,7 +46,7 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
     fadein:add( nn.ConcatTable()
                 :add(nn.Sequential():add(nn.SpatialUpSamplingNearest(2.0)):add(prev_block))     -- for low resl
                 :add(nn.Sequential():add(inter_block):add(to_rgb_block)))                       -- for high resl
-    fadein:add(nn.FadeInLayer(transition_tick))
+    fadein:add(nn.FadeInLayer())
     gen:add(fadein)
     fadein = nil
 
@@ -64,7 +64,7 @@ function network.attach_FadeInBlock(gen, dis, resl, g_config, d_config)
     fadein:add( nn.ConcatTable()
                 :add(nn.Sequential():add(nn.SpatialAveragePooling(2,2,2,2)):add(prev_block))
                 :add(nn.Sequential():add(from_rgb_block):add(inter_block)))
-    fadein:add(nn.FadeInLayer(transition_tick))
+    fadein:add(nn.FadeInLayer())
     dis:insert(fadein,1)            -- insert module in front
     fadein = nil
 

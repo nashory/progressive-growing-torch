@@ -30,7 +30,7 @@ function M.parse(arg)
 	cmd:option('-display_id', 10, 'display window id.')
 	cmd:option('-display_iter', 5, '# of iterations after which display is updated.')
 	cmd:option('-display_server_ip', '10.108.23.11', 'host server ip address.')
-	cmd:option('-display_server_port', 11200, 'host server port.')
+	cmd:option('-display_server_port', 11201, 'host server port.')
 	cmd:option('-save_jpg_iter', 6, 'save every X-th displayed image.')
 	cmd:option('-sever_name', 'progressive-growing-gan', 'server name.')
 
@@ -46,7 +46,7 @@ function M.parse(arg)
 	cmd:option('-nz', 512, '# of dimension for input noise(z)')
 
     --------------- Progressive Growing options -------------
-	cmd:option('-transition_tick', 200, 'ticks for transition (1 tick = 1K iter)')               -- (10,5)
+	cmd:option('-transition_tick', 300, 'ticks for transition (1 tick = 1K iter)')               -- (10,5)
 	cmd:option('-training_tick', 200, 'ticks for training (1 tick = 1K iter)')
 	cmd:option('-total_tick', 1000000, 'ticks for entire training (1 tick = 1K iter)')
     cmd:option('-epsilon_drift', 0.001, 'epsilon_drift')
