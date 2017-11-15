@@ -1,4 +1,13 @@
 # Progressive Growing of GANs for Improved Quality, Stability, and Variation
+
+
+-------
+
+[NOTE]  This project was not goint well, so I made PyTorch implementation here. :fire: [[pggan-pytorch]](https://github.com/nashory/pggan-pytorch)
+
+-------
+
+
   
 Torch implementation of [PROGRESSIVE GROWING OF GANS FOR IMPROVED QUALITY, STABILITY, AND VARIATION](http://research.nvidia.com/sites/default/files/pubs/2017-10_Progressive-Growing-of//karras2017gan-paper.pdf)   
 __YOUR CONTRIBUTION IS INVALUABLE FOR THIS PROJECT :)__ 
